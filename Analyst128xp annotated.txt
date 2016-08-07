@@ -1,0 +1,2206 @@
+                   
+8000:        8000    5           ORG   $8000         
+ 
+8000:                7 *********************************
+8000:                8 *                               *
+8000:                9 *       -< THE ANALYST >-       *
+8000:               10 *                               *
+8000:               11 *        128K VERSION XP        *
+8000:               12 *                               *
+8000:               13 *            2/07/05            *
+8000:               14 *                               *
+8000:               15 *********************************
+ 
+8000:               17 *** COMMANDS ***
+ 
+8000:               19 ; CTRL-F   FIND HEX SEQUENCE DEFINED BY F(H)
+8000:               20 ;      G   GO EXECUTE IN IMMEDIATE MODE  
+8000:               21 ;      H   LOAD BYTES FOR HSF F(CTRL-F) BY USING H: 
+8000:               22 ;      I   DISPLAY/SET PC/INTERNAL A,X,Y,P,S REGISTERS
+8000:               23 ;      J   JUMP. EXECUTE JSR INSTRUCTION IN STEP MODE
+8000:               24 ; CTRL-L   CLEAR PRESENT SCREEN AND HOME CURSOR
+8000:               25 ;      L   LIST DISASSEMBLY OR LOOP IN TRACE MODE.
+8000:               26 ;      M   MOVE BLOCK OF MEMORY
+8000:               27 ;      P   SEND OUTPUT TO PRINTER
+8000:               28 ;      R   RELOCATE ANALYST TO NEW ADDRESS PAGE
+8000:               29 ;      S   ENTER STEP MODE. STEP INSTRUCTION
+8000:               30 ;      T   TRACE PROGRAM
+8000:               31 ;      V   PRINT ANALYST VERSION# AND ORIGIN ADDRESS.
+8000:               32 ; CTRL-X   MOVE ANALYST TO AUX. DISABLED AFTER USE.
+8000:               33 ;      X   SKIP INSTRUCTION DURING STEP. TOGGLE MAIN/AUX
+8000:               34 ;      "   DUMP MEMORY IN ASCII 
+8000:               35 ;      /   SET OR PRINT SUBROUTINE TO JSR IMMED MODE
+8000:               36 ;      %   PRINT ADDRESS DATA VALUE IN BINARY
+8000:               37 ;      ?   PRINT LAST 16 PC'S EXEC'D DURING TRACE
+8000:               38 ;      @   SET TEXT 40/80 COL SCREEN
+8000:               39 ;      <   RANGE DELIMITER
+8000:               40 ;      .   RANGE DELIMITER
+8000:               41 ;      +   16 BIT ADDITION
+8000:               42 ;      -   16 BIT SUBTRACTION
+8000:               43 ;      :   STORE VALUE IN MEMORY
+8000:               44 ;      !   ENTER MINI-ASSEMBLER. <CR> ALONE TO EXIT 
+ 
+8000:               46 *** ROM ZERO PAGE EQUATES *** 
+ 
+8000:        0036   48 MCSWL     EQU   $36
+8000:        0037   49 MCSWH     EQU   $37
+8000:        003C   50 MA1       EQU   $3C
+8000:        003E   51 MA2       EQU   $3E
+8000:        0042   52 MA4       EQU   $42
+ 
+8000:               54 *** ANALYST EQUATES ***
+ 
+8000:        00EF   56 PCL       EQU   $EF           LABEL MARKS PAGE 0 
+8000:        00F0   57 PCH       EQU   $F0
+8000:        00F1   58 BASL      EQU   $F1
+8000:        00F2   59 BASH      EQU   $F2           LABEL USED AS IDENTIFIER 
+8000:        00F3   60 ZFLG      EQU   $F3           1 BYTE ID = $AA
+8000:        00F4   61 A1L       EQU   $F4           A1L-A5H MUST BE IN ORDER
+8000:        00F5   62 A1H       EQU   $F5           FOR MINI-ASSEMBLER 
+8000:        00F6   63 A2L       EQU   $F6           
+8000:        00F7   64 A2H       EQU   $F7           
+8000:        00F8   65 A3L       EQU   $F8           
+8000:        00F9   66 A3H       EQU   $F9           
+8000:        00FA   67 A4L       EQU   $FA           
+8000:        00FB   68 A4H       EQU   $FB           
+8000:        00FC   69 A5L       EQU   $FC           
+8000:        00FD   70 A5H       EQU   $FD           
+8000:        00FE   71 BAS2L     EQU   $FE
+8000:        00FF   72 BAS2H     EQU   $FF           LABEL MARKS END OF PAGE 0
+8000:        0102   73 WARMV     EQU   $0102         WARM REENTRY
+8000:        0108   74 XQTS      EQU   WARMV+6       EXEC AREA FOR STEP, TRACE
+8000:        011D   75 YPOKE     EQU   XQTS+21
+8000:        0125   76 PEEK      EQU   XQTS+29
+8000:        0127   77 YPEEK     EQU   XQTS+31
+8000:        013A   78 XQT       EQU   XQTS+50       18 BYTES
+8000:        014C   79 PCBUF     EQU   XQT+18        32 BYTE PC SAVE AREA.
+8000:        016C   80 IN        EQU   PCBUF+32      KEYIN BUFFER. 38 BYTES.
+8000:        BF00   81 MLI       EQU   $BF00         PRODOS INTERFACE
+ 
+8000:               83 *** ROM EQUATES ***
+ 
+8000:        C000   85 KBD       EQU   $C000
+8000:        C001   86 INHPAGE2  EQU   $C001         AUX $400-7FF SHOWS TEXT
+8000:        C002   87 MAINRD    EQU   $C002
+8000:        C004   88 MAINWR    EQU   $C004
+8000:        C00C   89 CLR80VID  EQU   $C00C
+8000:        C00D   90 SET80VID  EQU   $C00D
+8000:        C010   91 KBDSTRB   EQU   $C010
+8000:        C016   92 RDAUXZP   EQU   $C016         BMI IF AUXZP
+8000:        C018   93 RDPAGE2   EQU   $C018         BMI IF INHPAGE2 ON
+8000:        C01A   94 RDTEXT    EQU   $C01A         BMI IF TEXT MODE
+8000:        C01C   95 RDSCR     EQU   $C01C         BMI IF DPAGE2 ON
+8000:        C01F   96 RD80VID   EQU   $C01F         BMI IF 80 COL MODE
+8000:        C030   97 SPKR      EQU   $C030
+8000:        C051   98 TXTSET    EQU   $C051
+8000:        C054   99 LOWSCR    EQU   $C054
+8000:        C055  100 HISCR     EQU   $C055
+8000:        C061  101 PB0       EQU   $C061         OPEN APPLE KEY
+8000:        C062  102 PB1       EQU   $C062         CLOSED APPLE KEY
+8000:        C082  103 SWITCH2   EQU   $C082
+8000:        C311  104 AUXMOVE   EQU   $C311
+8000:        FE95  105 OUTPORT   EQU   $FE95         USED TO SET PRINTER
+8000:        E000  106 IDROM     EQU   $E000         = $4C IF ROM PRESENT
+ 
+ 
+ 
+8000:4C 9D 8A      108 START     JMP   RESET         COLD START
+8003:A6 EF         109 INSDS1    LDX   PCL
+8005:A4 F0         110           LDY   PCH
+8007:20 4C 88      111           JSR   CROUT
+800A:20 5B 88      112           JSR   PRYX2
+800D:20 50 88      113           JSR   OUTSP
+8010:20 25 01      114 INSDST    JSR   PEEK
+8013:A0 FF         115 INSDS2    LDY   #$FF          DETERMINE LENGTH OF 
+8015:8C CF 90      116           STY   LMNEM         INSTRUCTION. OPCODE IN
+8018:A8            117           TAY                  ACC. STORED IN LENGTH.
+8019:4A            118           LSR   A             INVALID =  0
+801A:90 05   8021  119           BCC   IEVEN         1 BYTE = 0
+801C:6A            120           ROR   A             2 BYTE = 1
+801D:B0 13   8032  121           BCS   ERR           3 BYTE = 2
+801F:29 87         122           AND   #$87
+8021:4A            123 IEVEN     LSR   A
+8022:AA            124           TAX                 
+8023:BD E3 8F      125           LDA   FMT1,X
+8026:90 04   802C  126           BCC   RTMSKZ
+8028:4A            127           LSR   A
+8029:4A            128           LSR   A
+802A:4A            129           LSR   A
+802B:4A            130           LSR   A
+802C:29 0F         131 RTMSKZ    AND   #$0F
+802E:C9 0F         132           CMP   #$0F
+8030:D0 13   8045  133           BNE   GETFMT
+8032:A0 FF         134 ERR       LDY   #$FF          BAD OPCODE
+8034:8C C6 90      135           STY   ERRFLG
+8037:C8            136           INY
+8038:8C CF 90      137           STY   LMNEM
+803B:8C D0 90      138           STY   RMNEM
+803E:8C D2 90      139           STY   FORMAT
+8041:8C D1 90      140           STY   LENGTH
+8044:60            141 RTS1      RTS
+8045:AA            142 GETFMT    TAX                 
+8046:BD D5 8F      143           LDA   FMT2,X
+8049:8D D2 90      144           STA   FORMAT
+804C:29 03         145           AND   #$03
+804E:8D D1 90      146           STA   LENGTH
+8051:AD C2 90      147           LDA   TFLG          BYPASS PRINT FORMATTING
+8054:D0 EE   8044  148           BNE   RTS1          IN TRACE
+8056:98            149           TYA                 
+8057:29 8F         150           AND   #$8F
+8059:48            151           PHA                  TEMP STORAGE
+805A:98            152           TYA                 
+805B:A2 1F         153           LDX   #31
+805D:CA            154 GETFMT2   DEX
+805E:30 08   8068  155           BMI   MNNDX
+8060:DD 27 90      156           CMP   OPC65C,X      MAKE SUBSTITUTION IF
+8063:D0 F8   805D  157           BNE   GETFMT2       65C02 OPCODE.
+8065:BD 46 90      158           LDA   REPL65C,X
+8068:FA            159 MNNDX     PLX
+8069:A0 03         160           LDY   #$03
+806B:E0 8A         161           CPX   #$8A
+806D:F0 0B   807A  162           BEQ   MNNDX3
+806F:4A            163 MNNDX1    LSR   A
+8070:90 08   807A  164           BCC   MNNDX3
+8072:4A            165           LSR   A
+8073:4A            166 MNNDX2    LSR   A
+8074:09 20         167           ORA   #$20
+8076:88            168           DEY                 
+8077:D0 FA   8073  169           BNE   MNNDX2
+8079:C8            170           INY                 
+807A:88            171 MNNDX3    DEY                 
+807B:D0 F2   806F  172           BNE   MNNDX1
+807D:60            173           RTS 
+807E:20 03 80      174 INSTDSP   JSR   INSDS1
+8081:48            175           PHA                 
+8082:20 27 01      176 PRNTOP    JSR   YPEEK
+8085:20 E2 88      177           JSR   PRBYTE
+8088:A2 01         178           LDX   #$01
+808A:20 07 81      179 PRNTBL    JSR   PRBLNK
+808D:CC D1 90      180           CPY   LENGTH
+8090:C8            181           INY                 
+8091:90 EF   8082  182           BCC   PRNTOP
+8093:A2 03         183           LDX   #$03
+8095:C0 03         184           CPY   #$03
+8097:90 F1   808A  185           BCC   PRNTBL
+8099:68            186           PLA                 
+809A:A8            187           TAY                 
+809B:AD CF 90      188           LDA   LMNEM
+809E:F0 0C   80AC  189           BEQ   PRMN1
+80A0:B9 3E 8F      190           LDA   MNEML,Y
+80A3:8D CF 90      191           STA   LMNEM
+80A6:B9 7E 8F      192           LDA   MNEMR,Y
+80A9:8D D0 90      193           STA   RMNEM
+80AC:A9 00         194 PRMN1     LDA   #$00
+80AE:A0 05         195           LDY   #$05
+80B0:0E D0 90      196 PRMN2     ASL   RMNEM
+80B3:2E CF 90      197           ROL   LMNEM
+80B6:2A            198           ROL   A
+80B7:88            199           DEY                 
+80B8:D0 F6   80B0  200           BNE   PRMN2
+80BA:69 BF         201           ADC   #$BF
+80BC:20 F5 88      202           JSR   COUT
+80BF:CA            203           DEX                 
+80C0:D0 EA   80AC  204           BNE   PRMN1
+80C2:20 50 88      205           JSR   OUTSP
+80C5:AC D1 90      206           LDY   LENGTH
+80C8:A2 05         207           LDX   #$05
+80CA:E0 02         208 PRADR1    CPX   #$02
+80CC:F0 1D   80EB  209           BEQ   PRADR5
+80CE:0E D2 90      210 PRADR2    ASL   FORMAT
+80D1:90 0E   80E1  211           BCC   PRADR3
+80D3:BD BE 8F      212           LDA   CHAR1,X
+80D6:20 F5 88      213           JSR   COUT
+80D9:BD C4 8F      214           LDA   CHAR2,X
+80DC:F0 03   80E1  215           BEQ   PRADR3
+80DE:20 F5 88      216           JSR   COUT
+80E1:CA            217 PRADR3    DEX                 
+80E2:10 E6   80CA  218           BPL   PRADR1
+80E4:60            219           RTS                 
+80E5:88            220 PRADR4    DEY                 
+80E6:30 E6   80CE  221           BMI   PRADR2
+80E8:20 E2 88      222           JSR   PRBYTE
+80EB:AD D2 90      223 PRADR5    LDA   FORMAT
+80EE:C9 E8         224           CMP   #$E8
+80F0:20 27 01      225           JSR   YPEEK
+80F3:90 F0   80E5  226           BCC   PRADR4
+80F5:20 1D 81      227           JSR   PCADJA
+80F8:AA            228           TAX                 
+80F9:E8            229           INX                 
+80FA:D0 01   80FD  230           BNE   PRNTYX
+80FC:C8            231           INY 
+80FD:98            232 PRNTYX    TYA                 
+80FE:20 E2 88      233 PRNTAX    JSR   PRBYTE        
+8101:8A            234           TXA                 
+8102:4C E2 88      235           JMP   PRBYTE
+8105:A2 03         236 PRBLNK3   LDX   #3
+8107:20 50 88      237 PRBLNK    JSR   OUTSP         PRINT X SPACES
+810A:CA            238           DEX                 
+810B:D0 FA   8107  239           BNE   PRBLNK
+810D:60            240           RTS                 
+810E:38            241 PCADJ     SEC                  UPDATE PC BY LENGTH+1 
+810F:AD D1 90      242 PCADJLP   LDA   LENGTH        UPDATE PC BY LENGTH
+8112:20 1D 81      243 PCADJAP   JSR   PCADJA        UPDATE PC BY ACC
+8115:85 EF         244           STA   PCL
+8117:84 F0         245           STY   PCH
+8119:60            246           RTS
+811A:AD D1 90      247 PCADJL    LDA   LENGTH        SET Y,A = PC+LENGTH 
+811D:A4 F0         248 PCADJA    LDY   PCH           SET Y,A = PC+ACC 
+811F:AA            249           TAX                 
+8120:10 01   8123  250           BPL   PCADJ2
+8122:88            251           DEY                 
+8123:65 EF         252 PCADJ2    ADC   PCL
+8125:90 01   8128  253           BCC   RTS2
+8127:C8            254           INY                 
+8128:60            255 RTS2      RTS                 
+8129:CE DA 90      256 STEP      DEC   YSAV          F(S)
+812C:8A            257 STEPL     TXA
+812D:F0 07   8136  258           BEQ   STEPZ
+812F:20 2F 85      259           JSR   SETBREAK      FIRST TIME
+8132:A2 01         260           LDX   #1
+8134:D0 60   8196  261           BNE   SSTEP         ALWAYS TAKEN
+8136:20 A9 87      262 STEPZ     JSR   KYWAIT
+8139:D0 06   8141  263           BNE   STEP1
+813B:EE DA 90      264           INC   YSAV          CTRL-C = EXIT TO NEXTITM
+813E:4C 60 8A      265           JMP   ZSWAPE        VIA ZSWAPE RTS
+8141:C0 CA         266 STEP1     CPY   #$CA
+8143:D0 08   814D  267           BNE   STEP2         
+8145:AD C3 90      268           LDA   JFLG          J = SINGLE STEP
+8148:F0 4C   8196  269           BEQ   SSTEP         IF NO JSR, ELSE
+814A:4C 75 82      270           JMP   TRCPCS        EXECUTE SUBROUTINE
+814D:C0 CC         271 STEP2     CPY   #$CC          L = LOOP. SET BREAK
+814F:D0 0C   815D  272           BNE   STEP2A        POINT AFTER INSTRUCTION
+8151:20 1A 81      273           JSR   PCADJL        TO BE EXECUTED NEXT
+8154:8D DD 90      274           STA   BRKADDR       AND ENTER TRACE.
+8157:8C DE 90      275           STY   BRKADDR+1     
+815A:4C 73 81      276           JMP   STEPT
+815D:AD C3 90      277 STEP2A    LDA   JFLG          SPC = SINGLE STEP IF
+8160:D0 04   8166  278           BNE   STEP3         NOT JSR, ELSE IGNORE
+8162:C0 A0         279           CPY   #$A0          
+8164:F0 30   8196  280           BEQ   SSTEP
+8166:C0 D3         281 STEP3     CPY   #$D3          S OR OPEN APPLE =
+8168:F0 2C   8196  282           BEQ   SSTEP         SINGLE STEP ALWAYS
+816A:98            283           TYA
+816B:F0 26   8193  284           BEQ   SSTEPW        = 0 FOR OPEN APPLE.
+816D:C0 D4         285           CPY   #$D4          T = ENTER TRACE MODE
+816F:D0 0B   817C  286           BNE   STEP4
+8171:A0 FF         287           LDY   #$FF
+8173:8C C2 90      288 STEPT     STY   TFLG          SET TRACE MODE FLAG
+8176:8C E2 90      289           STY   PCFLG         ENABLE PC PRINTING 
+8179:4C 93 82      290           JMP   STRACE        AND ENTER TRACE.
+817C:C0 D8         291 STEP4     CPY   #$D8          X = SKIP NEXT INSTRUCTION
+817E:D0 0C   818C  292           BNE   STEP5
+8180:9C C3 90      293           STZ   JFLG          ENABLE SPC IF SKP WHILE
+8183:9C C6 90      294           STZ   ERRFLG        JSR DISPLAYED ACTIVE.
+8186:20 0E 81      295           JSR   PCADJ         CLR IN CASE SKIP ERROR.
+8189:4C C4 8B      296           JMP   JRTSX
+818C:C0 C0         297 STEP5     CPY   #$C0          @ = TEXT MODE
+818E:D0 9C   812C  298           BNE   STEPL         LOOP BACK FOR INPUT
+8190:20 63 8E      299           JSR   TEXT
+8193:20 7A 87      300 SSTEPW    JSR   FWAIT         PAUSE TO RELEASE O/A KEY
+8196:20 A6 89      301 SSTEP     JSR   A1PC
+8199:20 51 87      302 SSTEPT    JSR   CLEARDSP      TRACE RE-ENTRY TO STEP
+819C:20 7E 80      303           JSR   INSTDSP
+819F:20 05 81      304           JSR   PRBLNK3
+81A2:20 25 01      305           JSR   PEEK
+81A5:29 0F         306           AND   #$0F
+81A7:C9 01         307           CMP   #$01          SEE IF ZERO PAGE IND
+81A9:D0 36   81E1  308           BNE   SSTEPZ
+81AB:A9 A8         309           LDA   #$A8          '('
+81AD:20 F5 88      310           JSR   COUT          PRINT ABSOLUTE VALUE
+81B0:20 25 01      311           JSR   PEEK          IN PARENTHESIS
+81B3:29 10         312           AND   #$10
+81B5:D0 03   81BA  313           BNE   INDY          TAKEN FOR (NN),Y.
+81B7:AE CA 90      314           LDX   XREG          FOR (NN,X).
+81BA:8A            315 INDY      TXA                  X=0 FOR (NN),Y
+81BB:8D DF 90      316           STA   TEMP1
+81BE:A0 01         317           LDY   #1
+81C0:20 27 01      318           JSR   YPEEK
+81C3:18            319           CLC
+81C4:6D DF 90      320           ADC   TEMP1
+81C7:48            321           PHA
+81C8:20 4D 8A      322           JSR   ZSWAP         GET PROGRAM PAGE 0 AND
+81CB:68            323           PLA                  SAVE POINTER ADDRESS ON
+81CC:AA            324           TAX                  STACK.
+81CD:B5 01         325           LDA   $01,X
+81CF:48            326           PHA
+81D0:B5 00         327           LDA   $00,X
+81D2:48            328           PHA
+81D3:20 4D 8A      329           JSR   ZSWAP         RESTORE ANALYST PAGE 0
+81D6:68            330           PLA                  AND RECOVER POINTER ADDR.
+81D7:AA            331           TAX
+81D8:68            332           PLA
+81D9:20 FE 80      333           JSR   PRNTAX
+81DC:A9 A9         334           LDA   #$A9          ')'
+81DE:20 F5 88      335           JSR   COUT
+81E1:4C 3E 83      336 SSTEPZ    JMP   TSTEP         
+81E4:A9 FF         337 PRNTPC    LDA   #$FF          PRINT PC AT TOP OF SCREEN
+81E6:8D D8 90      338           STA   CV            BY FORCING CROUT TO INC
+81E9:20 4C 88      339           JSR   CROUT         CV TO 0 (NEED FOR 80 COL)
+81EC:A9 1D         340           LDA   #29
+81EE:8D D7 90      341           STA   CH
+81F1:AD D6 90      342           LDA   PROMPT
+81F4:20 F5 88      343           JSR   COUT
+81F7:A5 F0         344           LDA   PCH
+81F9:A6 EF         345           LDX   PCL
+81FB:4C FE 80      346           JMP   PRNTAX        
+81FE:AE DC 90      347 TRACEPC   LDX   PCPNT         SAVE PC TO BE EXEC'D 
+8201:A5 F0         348           LDA   PCH           IN LIST BUFFER.
+8203:9D 4C 01      349           STA   PCBUF,X
+8206:E8            350           INX
+8207:A5 EF         351           LDA   PCL
+8209:9D 4C 01      352           STA   PCBUF,X
+820C:E8            353           INX
+820D:E0 20         354           CPX   #32
+820F:90 02   8213  355           BCC   PNTINC
+8211:A2 00         356           LDX   #0
+8213:8E DC 90      357 PNTINC    STX   PCPNT
+8216:AD 61 C0      358           LDA   PB0
+8219:10 0B   8226  359           BPL   TRCPC1
+821B:AD E2 90      360           LDA   PCFLG         O/A TOGGLES PRINT PC
+821E:49 FF         361           EOR   #$FF          ON/OFF
+8220:8D E2 90      362           STA   PCFLG
+8223:20 7A 87      363           JSR   FWAIT         PAUSE TO RELEASE O/A KEY
+8226:AD E2 90      364 TRCPC1    LDA   PCFLG
+8229:F0 10   823B  365           BEQ   TRCPC2        BYPASS PRINTING PC.
+822B:EE E3 90      366           INC   COUNTER       PRINT PC  
+822E:D0 0B   823B  367           BNE   TRCPC2        EVERY 256 INSTRUCTIONS 
+8230:AD D6 90      368           LDA   PROMPT        FLASHING '$' FOR TRACE
+8233:49 04         369           EOR   #$04          ACTIVITY. $A4->$A0->$A4
+8235:8D D6 90      370           STA   PROMPT
+8238:20 E4 81      371           JSR   PRNTPC
+823B:AD C3 90      372 TRCPC2    LDA   JFLG
+823E:F0 5F   829F  373           BEQ   TRACE5
+8240:A5 F0         374           LDA   PCH
+8242:C9 C0         375           CMP   #$C0
+8244:90 10   8256  376           BCC   TRCPCD
+8246:AC FF 90      377           LDY   ROMFLG
+8249:D0 0B   8256  378           BNE   TRCPCD
+824B:C9 D0         379           CMP   #$D0
+824D:90 13   8262  380           BCC   TRCPCI
+824F:AC 00 E0      381           LDY   IDROM         JSR ROM $C000-FFFF IN
+8252:C0 4C         382           CPY   #$4C          IMMEDIATE MODE UNLESS
+8254:F0 0C   8262  383           BEQ   TRCPCI        ROM FLAG SET <> 0.
+8256:CD C5 90      384 TRCPCD    CMP   DOSCALL+1     TRACE THRU JSR UNLESS =
+8259:D0 44   829F  385           BNE   TRACE5        DOS SUBROUTINE SPECIFIED
+825B:A5 EF         386           LDA   PCL           BY F(/).
+825D:CD C4 90      387           CMP   DOSCALL
+8260:D0 3D   829F  388           BNE   TRACE5
+8262:AD E2 90      389 TRCPCI    LDA   PCFLG         EXEC JSR IMMEDIATE. DON'T
+8265:F0 0E   8275  390           BEQ   TRCPCS        PRINT IF O/A TURNED OFF.
+8267:20 39 8E      391           JSR   SPROMPT       '#' DENOTES JSR IMMED.
+826A:20 E4 81      392           JSR   PRNTPC        PRINT EXEC SUBROUTINE
+826D:20 36 8E      393           JSR   DPROMPT       '$' PROMPT
+8270:A9 FF         394           LDA   #$FF          FORCE PC PRINTING
+8272:8D E3 90      395           STA   COUNTER       AFTER JSR IMMED.
+8275:A5 EF         396 TRCPCS    LDA   PCL           SEE IF PC = $BF00
+8277:D0 09   8282  397           BNE   TRCPCG
+8279:A5 F0         398           LDA   PCH
+827B:C9 BF         399           CMP   #<MLI
+827D:D0 03   8282  400           BNE   TRCPCG
+827F:A0 03         401           LDY   #3            3 PARMS FOR PRODOS MLI
+8281:2C            402           DFB   $2C           SKIP NEXT INSTRUCTION
+8282:A0 00         403 TRCPCG    LDY   #0            0 PARMS FOR EXEC
+8284:4C 5C 8B      404           JMP   GOPC
+8287:20 A6 89      405 TRACE     JSR   A1PC          F(T) A4<A1T A4=ENTER STEP
+828A:20 2F 85      406           JSR   SETBREAK      SET OR CLEAR BREAKPOINT
+828D:8E C2 90      407           STX   TFLG          SET TRACE FLAG
+8290:8E E2 90      408           STX   PCFLG         PC PRINTING ON
+8293:9C DC 90      409 STRACE    STZ   PCPNT         STEP -> TRACE ENTRY POINT
+8296:9C D9 90      410           STZ   DSPTOP        FOR STEP -> TRACE
+8299:20 36 8E      411           JSR   DPROMPT       '$' PROMPT
+829C:20 51 87      412           JSR   CLEARDSP
+829F:A2 01         413 TRACE5    LDX   #1            IF PC = A4 THEN ENTER STEP
+82A1:B5 EF         414 TRACE6    LDA   PCL,X
+82A3:DD DD 90      415           CMP   BRKADDR,X
+82A6:D0 08   82B0  416           BNE   TRACE7
+82A8:CA            417           DEX
+82A9:10 F6   82A1  418           BPL   TRACE6
+82AB:20 2F 85      419           JSR   SETBREAK      CLEAR OLD BREAKPOINT
+82AE:80 08   82B8  420           BRA   TRACES
+82B0:AD 62 C0      421 TRACE7    LDA   PB1           BACK TO STEP MODE IF
+82B3:30 03   82B8  422           BMI   TRACES        CLOSED APPLE PRESSED
+82B5:4C 3B 83      423           JMP   TRACE8
+82B8:8D 10 C0      424 TRACES    STA   KBDSTRB
+82BB:9C C2 90      425           STZ   TFLG          CLEAR TRACE FLAG
+82BE:9C D9 90      426           STZ   DSPTOP        RESET DISPLAY TO TOP
+82C1:AD 1A C0      427           LDA   RDTEXT        SEE IF GRAPHICS MODE
+82C4:30 03   82C9  428           BMI   TRACES2
+82C6:20 63 8E      429           JSR   TEXT          GRAPHICS -> TEXT
+82C9:20 2A 8E      430 TRACES2   JSR   STPRMPT       PROMPT BACK TO OLD '#'
+82CC:CE DA 90      431           DEC   YSAV
+82CF:AC DA 90      432           LDY   YSAV
+82D2:A9 D3         433           LDA   #$D3          PUT 'S' INTO INPUT BUFFER
+82D4:99 6C 01      434           STA   IN,Y
+82D7:4C 99 81      435           JMP   SSTEPT        RE-ENTER STEP MODE
+82DA:20 38 8A      436 NBRNCH    JSR   SAVE          ALL OTHER OPCODES 
+82DD:80 0C   82EB  437           BRA   UPDPC
+82DF:20 38 8A      438 BRANCH    JSR   SAVE          BRANCH WITH COND. MET 
+82E2:18            439           CLC                 
+82E3:A0 01         440           LDY   #$01
+82E5:20 27 01      441           JSR   YPEEK
+82E8:20 12 81      442           JSR   PCADJAP
+82EB:38            443 UPDPC     SEC
+82EC:20 0F 81      444 PCINC     JSR   PCADJLP
+82EF:AD C2 90      445 NEWPC     LDA   TFLG
+82F2:D0 06   82FA  446           BNE   TRACEBY       BYPASSES NEXTITM
+82F4:20 4C 88      447 NXTPC     JSR   CROUT         
+82F7:4C 78 85      448           JMP   REGDSP
+82FA:4C FE 81      449 TRACEBY   JMP   TRACEPC
+82FD:E8            450 XJMPATX   INX
+82FE:D0 1E   831E  451           BNE   XJMPAT
+8300:8D C3 90      452 XJSR      STA   JFLG          OK FOR F(J) 
+8303:EE D9 90      453           INC   DSPTOP
+8306:18            454           CLC
+8307:20 1A 81      455           JSR   PCADJL        SET Y,A = RTS ADDR 
+830A:48            456           PHA
+830B:AE CD 90      457           LDX   SPNT
+830E:98            458           TYA                 
+830F:9D 00 91      459           STA   STACK,X
+8312:CA            460           DEX                 
+8313:68            461           PLA                 
+8314:9D 00 91      462           STA   STACK,X
+8317:CA            463           DEX
+8318:8E CD 90      464           STX   SPNT
+831B:A0 02         465           LDY   #$02
+831D:18            466 XJMP      CLC                 
+831E:20 27 01      467 XJMPAT    JSR   YPEEK
+8321:48            468           PHA                 
+8322:88            469           DEY                 
+8323:20 27 01      470           JSR   YPEEK
+8326:85 EF         471           STA   PCL
+8328:68            472           PLA
+8329:85 F0         473           STA   PCH
+832B:90 C2   82EF  474           BCC   NEWPC
+832D:CA            475           DEX
+832E:D0 ED   831D  476           BNE   XJMP
+8330:AD CA 90      477           LDA   XREG
+8333:18            478           CLC
+8334:20 12 81      479           JSR   PCADJAP
+8337:A0 01         480           LDY   #1
+8339:80 E2   831D  481           BRA   XJMP
+833B:20 10 80      482 TRACE8    JSR   INSDST
+833E:AD C6 90      483 TSTEP     LDA   ERRFLG        IF BAD OPCODE THEN BRK 
+8341:D0 45   8388  484           BNE   XBRK
+8343:9C C3 90      485           STZ   JFLG          DISALLOW F(J) IF NO JSR 
+8346:20 25 01      486           JSR   PEEK          GET OPCODE
+8349:AC D1 90      487           LDY   LENGTH
+834C:C0 02         488           CPY   #2            CHECK ALL 3-BYTE INST
+834E:F0 03   8353  489           BEQ   TSTEP3
+8350:4C 07 84      490           JMP   TSTEP4
+8353:C9 20         491 TSTEP3    CMP   #$20
+8355:F0 A9   8300  492           BEQ   XJSR
+8357:C9 7C         493           CMP   #$7C
+8359:F0 A2   82FD  494           BEQ   XJMPATX
+835B:C9 4C         495           CMP   #$4C
+835D:F0 BE   831D  496           BEQ   XJMP
+835F:C9 6C         497           CMP   #$6C
+8361:F0 BB   831E  498           BEQ   XJMPAT
+8363:48            499           PHA                  SAVE OPCODE.
+8364:20 27 01      500           JSR   YPEEK         GET ADDRESS HI-BYTE.
+8367:C9 01         501           CMP   #$01          HANDLE 3-BYTE $100 REF
+8369:D0 35   83A0  502           BNE   TSTEP3X       SPECIAL.
+836B:68            503           PLA                  ADJ STACK.
+836C:AD C9 84      504           LDA   STACKLOC+2    SUBSTITUTE PSUEDO-STACK
+836F:80 0B   837C  505           BRA   XQSTK
+8371:        0008  506           DS    8,0
+8379:20 27 01      507 XQST1     JSR   YPEEK
+837C:99 0B 01      508 XQSTK     STA   XQTS+3,Y
+837F:88            509           DEY
+8380:10 F7   8379  510           BPL   XQST1
+8382:20 26 8A      511           JSR   RESTORE
+8385:4C 0B 01      512           JMP   XQTS+3        EXEC IN ANALYST R/W MODE
+8388:9C D9 90      513 XBRK      STZ   DSPTOP
+838B:9C C2 90      514           STZ   TFLG
+838E:20 51 87      515           JSR   CLEARDSP
+8391:20 7E 80      516           JSR   INSTDSP
+8394:20 4C 88      517           JSR   CROUT
+8397:20 81 85      518           JSR   RGDSP1
+839A:20 25 86      519           JSR   BELL
+839D:4C 60 8A      520           JMP   ZSWAPE        EXIT VIA NEXTITM
+83A0:C9 C0         521 TSTEP3X   CMP   #$C0          $C002-C005, $C008-C009
+83A2:D0 68   840C  522           BNE   TSTEP5        AUX R/W SWITCHES HANDLE
+83A4:88            523           DEY                  SPECIAL.
+83A5:20 27 01      524           JSR   YPEEK
+83A8:C8            525           INY
+83A9:C9 02         526           CMP   #$02
+83AB:90 5F   840C  527           BCC   TSTEP5
+83AD:C9 04         528           CMP   #$04
+83AF:90 45   83F6  529           BCC   TSTEPRD
+83B1:C9 06         530           CMP   #$06
+83B3:90 46   83FB  531           BCC   TSTEPWR
+83B5:C9 08         532           CMP   #$08
+83B7:90 53   840C  533           BCC   TSTEP5
+83B9:C9 0A         534           CMP   #$0A
+83BB:B0 4F   840C  535           BCS   TSTEP5
+83BD:8D E1 90      536           STA   TEMP3
+83C0:6A            537           ROR   A
+83C1:6A            538           ROR   A
+83C2:4D 16 C0      539           EOR   RDAUXZP
+83C5:10 3C   8403  540           BPL   STOUT2        NO CHANGE IN ZP STATE.
+83C7:20 4D 8A      541           JSR   ZSWAP         RESTORE PROGRAM ZP.
+83CA:AD E1 90      542           LDA   TEMP3         NEW ZP STATE
+83CD:4A            543           LSR   A             ODD/EVEN 9/8
+83CE:B0 03   83D3  544           BCS   ODDNEW
+83D0:A9 09         545           LDA   #9            NEW = 8
+83D2:2C            546           DFB   $2C
+83D3:A9 08         547 ODDNEW    LDA   #8            NEW = 9
+83D5:8D E0 90      548           STA   TEMP2         OLD STATE
+83D8:A2 00         549           LDX   #0            COPY XQTS ACROSS
+83DA:AC E0 90      550 STKLOOP   LDY   TEMP2
+83DD:99 00 C0      551           STA   $C000,Y       OLD ZP
+83E0:BD 00 01      552           LDA   $0100,X
+83E3:AC E1 90      553           LDY   TEMP3
+83E6:99 00 C0      554           STA   $C000,Y       NEW ZP
+83E9:9D 00 01      555           STA   $0100,X
+83EC:E8            556           INX
+83ED:F0 11   8400  557           BEQ   STKOUT
+83EF:E0 78         558           CPX   #>IN+12
+83F1:D0 E7   83DA  559           BNE   STKLOOP
+83F3:BA            560           TSX                  COPY ANALYST STACK ACROSS
+83F4:80 E4   83DA  561           BRA   STKLOOP
+83F6:8D 34 01      562 TSTEPRD   STA   XQTS+44       SET PROGRAM READ STATE.
+83F9:80 08   8403  563           BRA   STOUT2
+83FB:8D 37 01      564 TSTEPWR   STA   XQTS+47       SET PROGRAM WRITE STATE.
+83FE:80 03   8403  565           BRA   STOUT2
+8400:20 4D 8A      566 STKOUT    JSR   ZSWAP         PUT ANALYST ZP BACK.
+8403:68            567 STOUT2    PLA                  PULL OPC TO ADJ STACK
+8404:4C EB 82      568 UPDPCGO   JMP   UPDPC
+8407:C0 01         569 TSTEP4    CPY   #1
+8409:D0 38   8443  570           BNE   LEN0
+840B:48            571           PHA                  SAVE OPCODE
+840C:A9 EA         572 TSTEP5    LDA   #$EA          
+840E:8D 0C 01      573           STA   XQTS+4
+8411:8D 0D 01      574           STA   XQTS+5
+8414:68            575           PLA                  OPCODE
+8415:C9 80         576           CMP   #$80
+8417:D0 02   841B  577           BNE   NBRA
+8419:09 10         578           ORA   #$10
+841B:29 1F         579 NBRA      AND   #$1F
+841D:49 14         580           EOR   #$14
+841F:C9 04         581           CMP   #$04          = BRANCH OFFSET 
+8421:F0 03   8426  582           BEQ   XQ2           TAKEN IF BRANCH OPCODE 
+8423:20 27 01      583 XQ1       JSR   YPEEK         Y = LENGTH
+8426:99 0B 01      584 XQ2       STA   XQTS+3,Y      XQT   BCS BRNCH (B0 04)
+8429:88            585           DEY                        NOP 
+842A:10 F7   8423  586           BPL   XQ1                 JMP NBRNCH (CCLR)
+842C:20 26 8A      587           JSR   RESTORE       BRNCH JMP BRANCH (CSET)
+842F:4C 08 01      588           JMP   XQTS
+8432:AE CD 90      589 XTSX      LDX   SPNT
+8435:8E CA 90      590           STX   XREG
+8438:AE CA 90      591 XTXS      LDX   XREG
+843B:8E CE 90      592           STX   SREF
+843E:8E CD 90      593 UPDSPNT   STX   SPNT          UPDATE SPNT
+8441:80 C1   8404  594           BRA   UPDPCGO
+8443:C9 60         595 LEN0      CMP   #$60
+8445:F0 7C   84C3  596           BEQ   XRTS
+8447:C9 BA         597           CMP   #$BA
+8449:F0 E7   8432  598           BEQ   XTSX
+844B:C9 9A         599           CMP   #$9A
+844D:F0 E9   8438  600           BEQ   XTXS
+844F:C9 40         601           CMP   #$40
+8451:F0 04   8457  602           BEQ   XBRKGO        BRK FOR RTI INSTRUCTION
+8453:C9 00         603           CMP   #$00
+8455:D0 03   845A  604           BNE   PHCHECK
+8457:4C 88 83      605 XBRKGO    JMP   XBRK
+845A:48            606 PHCHECK   PHA                  SAVE OPCODE
+845B:C9 5A         607           CMP   #$5A
+845D:90 08   8467  608           BCC   TSTEP6
+845F:AA            609           TAX
+8460:29 1F         610           AND   #$1F
+8462:C9 1A         611           CMP   #$1A
+8464:F0 07   846D  612           BEQ   STKOPC        PHX,PLX,PHY,PLY
+8466:8A            613           TXA
+8467:29 9F         614 TSTEP6    AND   #$9F
+8469:C9 08         615           CMP   #$08          PHA,PLA,PHP,PLP
+846B:D0 9F   840C  616           BNE   TSTEP5
+846D:AE CD 90      617 STKOPC    LDX   SPNT          STACK OPCODES
+8470:68            618           PLA                  OPCODE
+8471:A8            619           TAY
+8472:29 10         620           AND   #$10
+8474:F0 26   849C  621           BEQ   APCODE
+8476:98            622           TYA
+8477:0A            623           ASL   A
+8478:B0 11   848B  624           BCS   OPCX
+847A:0A            625           ASL   A
+847B:0A            626           ASL   A
+847C:B0 05   8483  627           BCS   XPLY
+847E:AD CB 90      628           LDA   YREG          XPHY
+8481:80 28   84AB  629           BRA   PUSH
+8483:20 DB 84      630 XPLY      JSR   PULL
+8486:8D CB 90      631           STA   YREG
+8489:80 B3   843E  632 UPDSTACK  BRA   UPDSPNT
+848B:0A            633 OPCX      ASL   A
+848C:0A            634           ASL   A
+848D:B0 05   8494  635           BCS   XPLX
+848F:AD CA 90      636           LDA   XREG          XPHX
+8492:80 17   84AB  637           BRA   PUSH
+8494:20 DB 84      638 XPLX      JSR   PULL
+8497:8D CA 90      639           STA   XREG
+849A:80 ED   8489  640           BRA   UPDSTACK
+849C:98            641 APCODE    TYA
+849D:0A            642           ASL   A
+849E:0A            643           ASL   A
+849F:30 10   84B1  644           BMI   PULLAP
+84A1:90 05   84A8  645           BCC   XPHP
+84A3:AD C9 90      646           LDA   ACC           XPHA
+84A6:80 03   84AB  647           BRA   PUSH
+84A8:AD CC 90      648 XPHP      LDA   STATUS
+84AB:9D 00 91      649 PUSH      STA   STACK,X
+84AE:CA            650           DEX
+84AF:D0 D8   8489  651           BNE   UPDSTACK
+84B1:90 08   84BB  652 PULLAP    BCC   XPLP
+84B3:20 DB 84      653           JSR   PULL          XPLA
+84B6:8D C9 90      654 ACCLOC    STA   ACC
+84B9:80 CE   8489  655           BRA   UPDSTACK
+84BB:20 DB 84      656 XPLP      JSR   PULL
+84BE:8D CC 90      657           STA   STATUS
+84C1:80 C6   8489  658           BRA   UPDSTACK
+84C3:AE CD 90      659 XRTS      LDX   SPNT
+84C6:E8            660           INX
+84C7:BD 00 91      661 STACKLOC  LDA   STACK,X
+84CA:85 EF         662           STA   PCL
+84CC:E8            663           INX
+84CD:BD 00 91      664           LDA   STACK,X
+84D0:85 F0         665           STA   PCH
+84D2:8E CD 90      666           STX   SPNT
+84D5:CE D9 90      667           DEC   DSPTOP
+84D8:4C EC 82      668           JMP   PCINC
+84DB:E8            669 PULL      INX
+84DC:AC CC 90      670           LDY   STATUS        PULL FROM STACK AFFECTS
+84DF:5A            671           PHY                  N & Z FLAGS
+84E0:28            672           PLP
+84E1:BD 00 91      673           LDA   STACK,X
+84E4:08            674           PHP                  UPDATE N & Z
+84E5:7A            675           PLY
+84E6:8C CC 90      676           STY   STATUS
+84E9:60            677           RTS
+84EA:48            678 YPOKEPC   PHA                  EXECUTE STA (PCL),Y
+84EB:A5 EF         679           LDA   PCL
+84ED:85 F8         680           STA   A3L
+84EF:A5 F0         681           LDA   PCH
+84F1:85 F9         682           STA   A3H
+84F3:68            683           PLA
+84F4:4C 1D 01      684           JMP   YPOKE
+84F7:              685 *
+84F7:              686 * XQTS IMAGE AT $102-139. INSTRUCTIONS WITH '@' ARE
+84F7:              687 * CHANGEABLE IN XQTS AREA TO SET MAIN/AUX R/W STATE.
+84F7:              688 *
+84F7:20 2C 01      689 INITBL    JSR   XQTS+36       WARMV. REAL-TIME REENTRY
+84FA:4C 7A 8A      690           JMP   REENTER       BY JSR $102.
+84FD:20 33 01      691           JSR   XQTS+43       XQTS
+8500:EA            692           NOP
+8501:EA            693           NOP
+8502:EA            694           NOP
+8503:4C 17 01      695           JMP   XQTS+15
+8506:20 2C 01      696           JSR   XQTS+36
+8509:4C DF 82      697           JMP   BRANCH
+850C:20 2C 01      698           JSR   XQTS+36       XQTS+15
+850F:4C DA 82      699           JMP   NBRNCH
+8512:20 33 01      700           JSR   XQTS+43       YPOKE
+8515:91 F8         701           STA   (A3L),Y
+8517:4C 2C 01      702           JMP   XQTS+36
+851A:A0 00         703           LDY   #0            PEEK
+851C:20 33 01      704           JSR   XQTS+43       YPEEK
+851F:B1 EF         705           LDA   (PCL),Y
+8521:8D 02 C0      706           STA   MAINRD        @ XQTS+36. SET ANALYST
+8524:8D 04 C0      707           STA   MAINWR        @ STATE
+8527:60            708           RTS
+8528:8D 02 C0      709           STA   MAINRD        @ XQTS+43. SET PROGRAM
+852B:8D 04 C0      710           STA   MAINWR        @ STATE
+852E:60            711           RTS
+852F:              712 *
+852F:A2 01         713 SETBREAK  LDX   #1            SET BREAKPOINT TO A4
+8531:AD DE 90      714           LDA   BRKADDR+1     IF GIVEN, ELSE $FFFF.
+8534:F0 09   853F  715           BEQ   SETBRK2       BREAKPOINT GIVEN
+8536:A9 FF         716           LDA   #$FF
+8538:9D DD 90      717 SETBRK1   STA   BRKADDR,X     CLEAR OLD BREAKPOINT
+853B:CA            718           DEX
+853C:10 FA   8538  719           BPL   SETBRK1
+853E:60            720           RTS
+853F:B5 FA         721 SETBRK2   LDA   A4L,X         SET BREAKPOINT
+8541:9D DD 90      722           STA   BRKADDR,X
+8544:CA            723           DEX
+8545:10 F8   853F  724           BPL   SETBRK2
+8547:60            725           RTS
+8548:AD 6A 8B      726 LOAD      LDA   XQLOC1+1      F(H)
+854B:AC 6B 8B      727           LDY   XQLOC1+2      SETUP A3 = XQT+1 FOR HSF
+854E:80 0C   855C  728           BRA   A3SET         BUFFER (XQT=BYTE COUNT)
+8550:20 A6 89      729 SETRG1    JSR   A1PC
+8553:20 FE 85      730           JSR   SAVEPC
+8556:AD B7 84      731 SETRG2    LDA   ACCLOC+1      SETUP REGS FOR F(:)
+8559:AC B8 84      732           LDY   ACCLOC+2
+855C:85 F8         733 A3SET     STA   A3L
+855E:84 F9         734           STY   A3H
+8560:60            735           RTS
+8561:8A            736 SETREG    TXA                  F(I) SET OR DISPLAY REGS.
+8562:D0 EC   8550  737           BNE   SETRG1        TAKEN IF PC GIVEN.
+8564:AC DA 90      738           LDY   YSAV
+8567:B9 6C 01      739           LDA   IN,Y
+856A:C9 8D         740           CMP   #$8D
+856C:D0 E8   8556  741           BNE   SETRG2
+856E:AD C7 90      742           LDA   PCREG         I <CR> DISPLAYS REGS.
+8571:85 EF         743           STA   PCL
+8573:AD C8 90      744           LDA   PCREG+1
+8576:85 F0         745           STA   PCH
+8578:20 81 85      746 REGDSP    JSR   RGDSP1
+857B:4C 7E 80      747           JMP   INSTDSP       WILL RTS TO NEXTITM
+857E:        0003  748           DS    3,0
+8581:A2 00         749 RGDSP1    LDX   #0            
+8583:BD D2 8F      750 RDSP1     LDA   RTBL,X        
+8586:20 F5 88      751           JSR   COUT
+8589:A9 BD         752           LDA   #$BD
+858B:20 F5 88      753           JSR   COUT
+858E:BD C9 90      754           LDA   ACC,X         
+8591:20 E2 88      755           JSR   PRBYTE
+8594:20 50 88      756           JSR   OUTSP
+8597:E8            757           INX                 
+8598:E0 03         758           CPX   #3
+859A:90 E7   8583  759           BCC   RDSP1
+859C:A2 07         760           LDX   #7
+859E:BD CA 8F      761 PRFLG     LDA   CHAR3,X       PRINT 'NV-BDIZC' 
+85A1:20 F5 88      762           JSR   COUT
+85A4:CA            763           DEX                 
+85A5:10 F7   859E  764           BPL   PRFLG
+85A7:20 4C 88      765           JSR   CROUT         
+85AA:A9 C1         766           LDA   #$C1          PRINT ACC IN BINARY
+85AC:20 F5 88      767           JSR   COUT          
+85AF:20 46 89      768           JSR   OUTEQ
+85B2:AD C9 90      769           LDA   ACC
+85B5:20 12 86      770           JSR   BNDSP
+85B8:20 05 81      771           JSR   PRBLNK3
+85BB:A9 D0         772           LDA   #$D0          PRINT STATUS IN BINARY
+85BD:20 F5 88      773           JSR   COUT
+85C0:20 46 89      774           JSR   OUTEQ
+85C3:AD CC 90      775           LDA   STATUS
+85C6:20 12 86      776           JSR   BNDSP
+85C9:20 4C 88      777           JSR   CROUT
+85CC:A9 D3         778           LDA   #$D3
+85CE:20 F5 88      779           JSR   COUT
+85D1:20 46 89      780           JSR   OUTEQ
+85D4:AD CD 90      781           LDA   SPNT
+85D7:20 E2 88      782           JSR   PRBYTE
+85DA:A9 BA         783           LDA   #$BA
+85DC:20 F5 88      784           JSR   COUT
+85DF:A9 D8         785           LDA   #$D8
+85E1:20 F5 88      786           JSR   COUT
+85E4:20 F5 88      787           JSR   COUT
+85E7:A0 0A         788           LDY   #10
+85E9:AE CD 90      789           LDX   SPNT
+85EC:20 50 88      790 PRNTSTK   JSR   OUTSP         PRINT STACK BYTES FROM
+85EF:EC CE 90      791           CPX   SREF          SPNT TO SREF UP TO 10
+85F2:F0 0A   85FE  792           BEQ   SAVEPC        MAX.
+85F4:E8            793           INX
+85F5:BD 00 91      794           LDA   STACK,X
+85F8:20 E2 88      795           JSR   PRBYTE
+85FB:88            796           DEY
+85FC:D0 EE   85EC  797           BNE   PRNTSTK
+85FE:A5 EF         798 SAVEPC    LDA   PCL
+8600:8D C7 90      799           STA   PCREG
+8603:A5 F0         800           LDA   PCH
+8605:8D C8 90      801           STA   PCREG+1
+8608:60            802           RTS
+8609:20 A4 89      803 BINARY    JSR   A1PCX         F(%) PRINT VALUE AT
+860C:20 4C 88      804           JSR   CROUT         ADDRESS IN BINARY.
+860F:20 25 01      805           JSR   PEEK
+8612:A2 08         806 BNDSP     LDX   #$08          INDEX FOR 8 BITS 
+8614:0A            807 NEXTBIT   ASL   A
+8615:48            808           PHA                 
+8616:B0 03   861B  809           BCS   BIT1
+8618:A9 30         810           LDA   #$30          '0' 
+861A:2C            811           DFB   $2C           SKIP NEXT INSTRUCTION
+861B:A9 31         812 BIT1      LDA   #$31          '1' 
+861D:20 F5 88      813           JSR   COUT
+8620:68            814           PLA                 
+8621:CA            815           DEX                 
+8622:D0 F0   8614  816           BNE   NEXTBIT       
+8624:60            817           RTS                 
+8625:A0 38         818 BELL      LDY   #$38          DURATION 
+8627:A9 2B         819 BELL2     LDA   #$2B          FREQUENCY 
+8629:20 7C 87      820           JSR   WAIT
+862C:AD 30 C0      821           LDA   SPKR
+862F:88            822           DEY
+8630:D0 F5   8627  823           BNE   BELL2
+8632:60            824           RTS
+8633:6C C0 90      825 COUTZ     JMP   (CSWL)
+8636:89 60         826 VIDOUT    BIT   #$60
+8638:F0 46   8680  827           BEQ   CTRLCHAR
+863A:A8            828           TAY                 
+863B:C9 60         829           CMP   #$60
+863D:B0 06   8645  830           BCS   VID1
+863F:C9 40         831           CMP   #$40
+8641:90 02   8645  832           BCC   VID1
+8643:29 BF         833           AND   #$BF
+8645:AC D7 90      834 VID1      LDY   CH
+8648:2C 1F C0      835           BIT   RD80VID
+864B:10 0A   8657  836           BPL   VID3
+864D:48            837           PHA
+864E:98            838           TYA
+864F:4A            839           LSR   A
+8650:B0 03   8655  840           BCS   VID2
+8652:8D 55 C0      841           STA   HISCR
+8655:A8            842 VID2      TAY
+8656:68            843           PLA
+8657:91 F1         844 VID3      STA   (BASL),Y
+8659:8D 54 C0      845           STA   LOWSCR
+865C:AC D7 90      846           LDY   CH
+865F:C8            847           INY
+8660:CC D5 90      848           CPY   WNDWDTH
+8663:B0 25   868A  849           BCS   CR
+8665:8C D7 90      850           STY   CH
+8668:60            851 VIDRTS    RTS
+8669:CE D7 90      852 BACKSPC   DEC   CH
+866C:10 FA   8668  853           BPL   VIDRTS
+866E:AC D5 90      854           LDY   WNDWDTH
+8671:88            855           DEY                 
+8672:8C D7 90      856           STY   CH
+8675:AD D8 90      857 UP        LDA   CV
+8678:3A            858           DEC   A
+8679:C9 00         859           CMP   #0
+867B:30 EB   8668  860           BMI   VIDRTS
+867D:4C FB 86      861 VTABVGO   JMP   VTABV
+8680:09 80         862 CTRLCHAR  ORA   #$80
+8682:C9 88         863           CMP   #$88
+8684:F0 E3   8669  864           BEQ   BACKSPC
+8686:C9 8D         865           CMP   #$8D
+8688:D0 DE   8668  866           BNE   VIDRTS
+868A:A9 00         867 CR        LDA   #$00
+868C:8D D7 90      868           STA   CH
+868F:EE D8 90      869           INC   CV
+8692:AD D8 90      870           LDA   CV
+8695:C9 18         871           CMP   #24
+8697:90 E4   867D  872           BCC   VTABVGO
+8699:CE D8 90      873           DEC   CV
+869C:A2 00         874           LDX   #0            SCROLL
+869E:8A            875           TXA                 
+869F:20 FE 86      876           JSR   VTABZ
+86A2:80 30   86D4  877           BRA   SCRL5
+86A4:A4 F2         878 SCRL1     LDY   BASH
+86A6:84 FF         879           STY   BAS2H
+86A8:A4 F1         880           LDY   BASL
+86AA:84 FE         881           STY   BAS2L
+86AC:8A            882           TXA                 
+86AD:20 FE 86      883           JSR   VTABZ
+86B0:DA            884           PHX                 
+86B1:AE D5 90      885           LDX   WNDWDTH
+86B4:A0 00         886           LDY   #0
+86B6:2C 1F C0      887 SCRL2     BIT   RD80VID
+86B9:10 0D   86C8  888           BPL   SCRL3
+86BB:8D 55 C0      889           STA   HISCR
+86BE:B1 F1         890           LDA   (BASL),Y
+86C0:91 FE         891           STA   (BAS2L),Y
+86C2:CA            892           DEX                 
+86C3:F0 0B   86D0  893           BEQ   SCRL4
+86C5:8D 54 C0      894           STA   LOWSCR
+86C8:B1 F1         895 SCRL3     LDA   (BASL),Y
+86CA:91 FE         896           STA   (BAS2L),Y
+86CC:C8            897           INY                 
+86CD:CA            898           DEX                 
+86CE:D0 E6   86B6  899           BNE   SCRL2
+86D0:8D 54 C0      900 SCRL4     STA   LOWSCR
+86D3:FA            901           PLX                 
+86D4:E8            902 SCRL5     INX                 
+86D5:E0 18         903           CPX   #24
+86D7:90 CB   86A4  904           BCC   SCRL1
+86D9:A9 00         905           LDA   #$00
+86DB:20 19 87      906           JSR   CLEOLZ
+86DE:4C F8 86      907           JMP   VTAB
+86E1:A9 00         908 HOME      LDA   #0
+86E3:8D D7 90      909           STA   CH
+86E6:8D D8 90      910           STA   CV
+86E9:48            911 CLS1      PHA                 
+86EA:20 FE 86      912           JSR   VTABZ
+86ED:A9 00         913           LDA   #0
+86EF:20 19 87      914           JSR   CLEOLZ
+86F2:68            915           PLA                 
+86F3:1A            916           INC   A
+86F4:C9 18         917           CMP   #24
+86F6:90 F1   86E9  918           BCC   CLS1
+86F8:AD D8 90      919 VTAB      LDA   CV
+86FB:8D D8 90      920 VTABV     STA   CV
+86FE:48            921 VTABZ     PHA                 
+86FF:4A            922           LSR   A
+8700:29 03         923           AND   #$03
+8702:09 04         924           ORA   #$04
+8704:85 F2         925           STA   BASH
+8706:68            926           PLA
+8707:29 18         927           AND   #$18
+8709:90 02   870D  928           BCC   BSCLC2
+870B:69 7F         929           ADC   #$7F
+870D:85 F1         930 BSCLC2    STA   BASL
+870F:0A            931           ASL   A
+8710:0A            932           ASL   A
+8711:05 F1         933           ORA   BASL
+8713:85 F1         934           STA   BASL
+8715:60            935           RTS                 
+8716:AD D7 90      936 CLREOL    LDA   CH
+8719:2C 1F C0      937 CLEOLZ    BIT   RD80VID
+871C:10 24   8742  938           BPL   CLEOL4
+871E:48            939           PHA                  CLREOL 80 COL
+871F:38            940           SEC                 
+8720:ED D5 90      941           SBC   WNDWDTH
+8723:AA            942           TAX                 
+8724:68            943           PLA                 
+8725:4A            944           LSR   A
+8726:A8            945           TAY                 
+8727:08            946           PHP                 
+8728:A9 A0         947           LDA   #$A0
+872A:28            948           PLP                 
+872B:B0 08   8735  949           BCS   CLEOL8B
+872D:8D 55 C0      950 CLEOL8A   STA   HISCR
+8730:91 F1         951           STA   (BASL),Y
+8732:E8            952           INX                 
+8733:F0 09   873E  953           BEQ   CLEOL8C
+8735:8D 54 C0      954 CLEOL8B   STA   LOWSCR
+8738:91 F1         955           STA   (BASL),Y
+873A:C8            956           INY                 
+873B:E8            957           INX                 
+873C:D0 EF   872D  958           BNE   CLEOL8A
+873E:8D 54 C0      959 CLEOL8C   STA   LOWSCR
+8741:60            960           RTS                 
+8742:A8            961 CLEOL4    TAY                 
+8743:38            962           SEC                 
+8744:ED D5 90      963           SBC   WNDWDTH
+8747:AA            964           TAX                 
+8748:A9 A0         965           LDA   #$A0
+874A:91 F1         966 CLEOL4A   STA   (BASL),Y
+874C:C8            967           INY                 
+874D:E8            968           INX                 
+874E:D0 FA   874A  969           BNE   CLEOL4A
+8750:60            970           RTS                 
+8751:A2 06         971 CLEARDSP  LDX   #6            CLEAR DISPLAY WINDOW
+8753:AD D9 90      972 CLRDSP1   LDA   DSPTOP
+8756:10 02   875A  973           BPL   CLRDSP2       HOLD TOP OF DISPLAY
+8758:A9 00         974           LDA   #0            0 <= TOP <= 18.
+875A:C9 12         975 CLRDSP2   CMP   #18
+875C:90 02   8760  976           BCC   CLRDSP3
+875E:A9 12         977           LDA   #18
+8760:8D D9 90      978 CLRDSP3   STA   DSPTOP
+8763:8D D8 90      979           STA   CV            CLEAR 6 LINE DISPLAY
+8766:CE D8 90      980           DEC   CV            FROM DSPTOP DOWN AND
+8769:8A            981           TXA                  SET CV SO INSTDSP WILL
+876A:F0 0D   8779  982           BEQ   RTS4A         PRINT AT DSPTOP UPON
+876C:20 4C 88      983 CLRDSP4   JSR   CROUT         EXIT.
+876F:DA            984           PHX
+8770:20 16 87      985           JSR   CLREOL
+8773:FA            986           PLX
+8774:CA            987           DEX
+8775:D0 F5   876C  988           BNE   CLRDSP4
+8777:F0 DA   8753  989           BEQ   CLRDSP1
+8779:60            990 RTS4A     RTS
+877A:A9 FF         991 FWAIT     LDA   #$FF
+877C:38            992 WAIT      SEC                 
+877D:48            993 WAIT2     PHA                 
+877E:E9 01         994 WAIT3     SBC   #$01
+8780:D0 FC   877E  995           BNE   WAIT3
+8782:68            996           PLA                 
+8783:E9 01         997           SBC   #$01
+8785:D0 F6   877D  998           BNE   WAIT2
+8787:60            999           RTS                 
+8788:E6 FA        1000 NXTA4     INC   A4L           INCREMENT A4 
+878A:D0 02   878E 1001           BNE   NXTA1
+878C:E6 FB        1002           INC   A4H
+878E:A5 F4        1003 NXTA1     LDA   A1L
+8790:C5 F6        1004           CMP   A2L
+8792:A5 F5        1005           LDA   A1H
+8794:E5 F7        1006           SBC   A2H
+8796:E6 F4        1007           INC   A1L
+8798:D0 02   879C 1008           BNE   RTS4B
+879A:E6 F5        1009           INC   A1H
+879C:60           1010 RTS4B     RTS                  CARRY SET IF A1 >= A2 
+879D:AC 00 C0     1011 CTRLC     LDY   KBD           CHECK FOR CTRL-C 
+87A0:10 19   87BB 1012           BPL   CTLCRTS
+87A2:8C 10 C0     1013           STY   KBDSTRB
+87A5:C0 93        1014           CPY   #$93          CTRL-S = PAUSE 
+87A7:D0 10   87B9 1015           BNE   CTLC
+87A9:AC 61 C0     1016 KYWAIT    LDY   PB0           F(S) ENTRY POINT
+87AC:30 09   87B7 1017           BMI   KYWT2
+87AE:AC 00 C0     1018           LDY   KBD
+87B1:10 F6   87A9 1019           BPL   KYWAIT
+87B3:8C 10 C0     1020           STY   KBDSTRB
+87B6:2C           1021           DFB   $2C
+87B7:A0 00        1022 KYWT2     LDY   #0            0 = OPEN APPLE PRESSED
+87B9:C0 83        1023 CTLC      CPY   #$83
+87BB:60           1024 CTLCRTS   RTS                  Z SET FOR CTRL-C.
+87BC:8C DB 90     1025 RDKEY     STY   YSAV1
+87BF:AC 1C C0     1026           LDY   RDSCR
+87C2:08           1027           PHP
+87C3:AC 18 C0     1028           LDY   RDPAGE2
+87C6:08           1029           PHP
+87C7:8D 01 C0     1030           STA   INHPAGE2
+87CA:8D 54 C0     1031           STA   LOWSCR
+87CD:DA           1032           PHX
+87CE:AD D7 90     1033           LDA   CH
+87D1:2C 1F C0     1034           BIT   RD80VID
+87D4:10 06   87DC 1035           BPL   KEY2
+87D6:4A           1036           LSR   A
+87D7:B0 03   87DC 1037           BCS   KEY2
+87D9:8D 55 C0     1038           STA   HISCR
+87DC:A8           1039 KEY2      TAY                 
+87DD:B1 F1        1040           LDA   (BASL),Y
+87DF:48           1041           PHA                 
+87E0:49 80        1042           EOR   #$80
+87E2:89 20        1043           BIT   #$20
+87E4:D0 02   87E8 1044           BNE   KEY3
+87E6:49 40        1045           EOR   #$40
+87E8:91 F1        1046 KEY3      STA   (BASL),Y
+87EA:AE 00 C0     1047 KEY4      LDX   KBD
+87ED:10 FB   87EA 1048           BPL   KEY4
+87EF:8D 10 C0     1049           STA   KBDSTRB
+87F2:68           1050           PLA                 
+87F3:91 F1        1051           STA   (BASL),Y
+87F5:8D 54 C0     1052           STA   LOWSCR
+87F8:8A           1053           TXA                 
+87F9:4C 0C 89     1054           JMP   ENDHOOK
+87FC:BD 6C 01     1055 NOTCR     LDA   IN,X
+87FF:20 F5 88     1056           JSR   COUT          
+8802:C9 88        1057           CMP   #$88
+8804:F0 1C   8822 1058           BEQ   BCKSPC
+8806:E0 22        1059           CPX   #34           BEEP ON LAST 4 CHAR. 
+8808:90 03   880D 1060           BCC   NOTCR1
+880A:20 25 86     1061           JSR   BELL
+880D:E8           1062 NOTCR1    INX                 
+880E:E0 26        1063           CPX   #38           38 CHARACTERS ALLOWED 
+8810:90 14   8826 1064           BCC   NXTCHAR       
+8812:A9 DC        1065           LDA   #$DC
+8814:20 F5 88     1066           JSR   COUT          
+8817:20 4C 88     1067 GETLNZ    JSR   CROUT
+881A:AD D6 90     1068           LDA   PROMPT
+881D:20 F5 88     1069           JSR   COUT          
+8820:A2 01        1070           LDX   #$01
+8822:8A           1071 BCKSPC    TXA                 
+8823:F0 F2   8817 1072           BEQ   GETLNZ
+8825:CA           1073           DEX                 
+8826:20 BC 87     1074 NXTCHAR   JSR   RDKEY
+8829:C9 95        1075           CMP   #$95          
+882B:F0 F9   8826 1076           BEQ   NXTCHAR       IGNORE '->'
+882D:C9 FF        1077           CMP   #$FF
+882F:D0 02   8833 1078           BNE   NOTDEL
+8831:A9 88        1079           LDA   #$88          DELETE KEY = BACKSPACE
+8833:C9 88        1080 NOTDEL    CMP   #$88
+8835:D0 08   883F 1081           BNE   CAPTST
+8837:48           1082           PHA
+8838:20 F5 88     1083           JSR   COUT          BACKSPACE
+883B:20 50 88     1084           JSR   OUTSP         DELETE CHARACTER
+883E:68           1085           PLA                  BACKSPACE
+883F:C9 E0        1086 CAPTST    CMP   #$E0
+8841:90 02   8845 1087           BCC   ADDINP
+8843:29 DF        1088           AND   #$DF
+8845:9D 6C 01     1089 ADDINP    STA   IN,X
+8848:C9 8D        1090           CMP   #$8D
+884A:D0 B0   87FC 1091           BNE   NOTCR
+884C:A9 8D        1092 CROUT     LDA   #$8D
+884E:D0 12   8862 1093           BNE   COUTGO
+8850:A9 A0        1094 OUTSP     LDA   #$A0
+8852:D0 0E   8862 1095           BNE   COUTGO
+8854:20 4C 88     1096 PRA1      JSR   CROUT
+8857:A4 F5        1097           LDY   A1H
+8859:A6 F4        1098           LDX   A1L
+885B:20 FD 80     1099 PRYX2     JSR   PRNTYX
+885E:A0 00        1100           LDY   #$00
+8860:A9 AD        1101           LDA   #$AD
+8862:20 F5 88     1102 COUTGO    JSR   COUT
+8865:60           1103 PRA1RTS   RTS
+8866:38           1104 ASC       SEC                  F(")
+8867:6A           1105 XAM       ROR   A             CARRY INTO BIT 7
+8868:85 F9        1106           STA   A3H
+886A:80 06   8872 1107           BRA   XAM1
+886C:A5 F4        1108 MOD8CHK   LDA   A1L
+886E:29 07        1109           AND   #$07
+8870:D0 08   887A 1110           BNE   DATAOUT
+8872:20 9D 87     1111 XAM1      JSR   CTRLC         F(.) A1.A2 HEX OR ASC
+8875:F0 EE   8865 1112           BEQ   PRA1RTS
+8877:20 54 88     1113           JSR   PRA1
+887A:20 50 88     1114 DATAOUT   JSR   OUTSP         
+887D:A5 F5        1115           LDA   A1H           SEE IF ZERO PAGE
+887F:F0 0B   888C 1116           BEQ   XAMZ
+8881:3A           1117           DEC   A             SEE IF $01NN
+8882:D0 15   8899 1118           BNE   XAM2
+8884:A5 F4        1119           LDA   A1L           GET $01NN FROM STACK,NN
+8886:AA           1120           TAX
+8887:BD 00 91     1121           LDA   STACK,X
+888A:80 13   889F 1122           BRA   XAM3
+888C:A5 F4        1123 XAMZ      LDA   A1L
+888E:38           1124           SEC
+888F:E9 EF        1125           SBC   #PCL
+8891:90 06   8899 1126           BCC   XAM2          TAKEN IF A1L < PCL
+8893:AA           1127           TAX                  ELSE GET FROM ZBUF
+8894:BD E4 90     1128           LDA   ZBUF,X
+8897:80 06   889F 1129           BRA   XAM3
+8899:20 A4 89     1130 XAM2      JSR   A1PCX
+889C:20 25 01     1131           JSR   PEEK
+889F:A6 F9        1132 XAM3      LDX   A3H
+88A1:10 0D   88B0 1133           BPL   XAM4          
+88A3:09 80        1134           ORA   #$80          XAM IN ASC
+88A5:C9 A0        1135           CMP   #$A0
+88A7:B0 02   88AB 1136           BCS   PRASC         TAKEN IF NORM. OR LCASE
+88A9:A9 A0        1137           LDA   #$A0          SPACE FOR CTRL OR INV   
+88AB:20 F5 88     1138 PRASC     JSR   COUT
+88AE:80 03   88B3 1139           BRA   XAM5
+88B0:20 E2 88     1140 XAM4      JSR   PRBYTE        XAM IN HEX
+88B3:20 8E 87     1141 XAM5      JSR   NXTA1
+88B6:90 B4   886C 1142           BCC   MOD8CHK       CARRY CLEAR IF A1<A2 
+88B8:60           1143           RTS                 
+88B9:4A           1144 XAMPM     LSR   A
+88BA:90 AB   8867 1145           BCC   XAM
+88BC:4A           1146           LSR   A
+88BD:4A           1147           LSR   A
+88BE:A5 F4        1148           LDA   A1L           16 BIT ADD. OR SUB. 
+88C0:90 0C   88CE 1149           BCC   ADD
+88C2:E5 F6        1150           SBC   A2L           SUBTRACT A2 FROM A1 
+88C4:85 F4        1151           STA   A1L           RESULT IN A1 
+88C6:A5 F5        1152           LDA   A1H
+88C8:E5 F7        1153           SBC   A2H
+88CA:85 F5        1154           STA   A1H
+88CC:80 0A   88D8 1155           BRA   PRANS         
+88CE:65 F6        1156 ADD       ADC   A2L           ADD A1 AND A2 
+88D0:85 F4        1157           STA   A1L           RESULT IN A1 
+88D2:A5 F5        1158           LDA   A1H
+88D4:65 F7        1159           ADC   A2H
+88D6:85 F5        1160           STA   A1H
+88D8:20 46 89     1161 PRANS     JSR   OUTEQ         
+88DB:A5 F5        1162           LDA   A1H
+88DD:20 E2 88     1163           JSR   PRBYTE
+88E0:A5 F4        1164           LDA   A1L
+88E2:48           1165 PRBYTE    PHA                 
+88E3:4A           1166           LSR   A
+88E4:4A           1167           LSR   A
+88E5:4A           1168           LSR   A
+88E6:4A           1169           LSR   A
+88E7:20 ED 88     1170           JSR   PRHEXZ
+88EA:68           1171           PLA                 
+88EB:29 0F        1172           AND   #$0F
+88ED:09 B0        1173 PRHEXZ    ORA   #$B0
+88EF:C9 BA        1174           CMP   #$BA
+88F1:90 02   88F5 1175           BCC   COUT
+88F3:69 06        1176           ADC   #$06
+88F5:8C DB 90     1177 COUT      STY   YSAV1
+88F8:AC 1C C0     1178           LDY   RDSCR
+88FB:08           1179           PHP
+88FC:AC 18 C0     1180           LDY   RDPAGE2
+88FF:08           1181           PHP
+8900:8D 01 C0     1182           STA   INHPAGE2
+8903:8D 54 C0     1183           STA   LOWSCR
+8906:DA           1184           PHX
+8907:48           1185           PHA
+8908:20 33 86     1186           JSR   COUTZ
+890B:68           1187           PLA
+890C:FA           1188 ENDHOOK   PLX                  RDKEY EXITS HERE
+890D:AC DB 90     1189           LDY   YSAV1
+8910:28           1190           PLP
+8911:30 05   8918 1191           BMI   COUT2
+8913:8D 00 C0     1192           STA   KBD
+8916:10 03   891B 1193           BPL   COUT3
+8918:8D 01 C0     1194 COUT2     STA   INHPAGE2
+891B:28           1195 COUT3     PLP
+891C:30 04   8922 1196           BMI   COUT4
+891E:8D 54 C0     1197           STA   LOWSCR
+8921:60           1198           RTS
+8922:8D 55 C0     1199 COUT4     STA   HISCR
+8925:60           1200           RTS
+8926:CE DA 90     1201 BL1       DEC   YSAV          F(CR) CALLS HERE
+8929:F0 1A   8945 1202           BEQ   RTS5          CR ONLY SO IGNORE 
+892B:CA           1203 BLANK     DEX                 
+892C:D0 26   8954 1204           BNE   SETMDZ
+892E:C9 BA        1205           CMP   #$BA
+8930:F0 03   8935 1206           BEQ   BLNK2
+8932:4C B9 88     1207           JMP   XAMPM
+8935:8D D3 90     1208 BLNK2     STA   MODE          F(:) 
+8938:A5 F6        1209           LDA   A2L
+893A:20 1D 01     1210           JSR   YPOKE         Y=0
+893D:E6 FC        1211           INC   A5L           HSF BYTE COUNT
+893F:E6 F8        1212           INC   A3L
+8941:D0 02   8945 1213           BNE   RTS5
+8943:E6 F9        1214           INC   A3H
+8945:60           1215 RTS5      RTS                 
+8946:A9 BD        1216 OUTEQ     LDA   #$BD
+8948:D0 AB   88F5 1217           BNE   COUT
+894A:A9 00        1218 SETMODE   LDA   #0
+894C:85 FC        1219           STA   A5L           CLEAR HSF BYTE COUNT
+894E:AC DA 90     1220           LDY   YSAV          
+8951:B9 6B 01     1221           LDA   IN-1,Y        EQUALS :,+,- OR . MODE 
+8954:8D D3 90     1222 SETMDZ    STA   MODE
+8957:60           1223           RTS                 
+8958:A2 01        1224 LT        LDX   #$01          F(<) 
+895A:B5 F6        1225 LT2       LDA   A2L,X         COPY A2 TO A4 
+895C:95 FA        1226           STA   A4L,X
+895E:CA           1227           DEX                 
+895F:10 F9   895A 1228           BPL   LT2
+8961:E8           1229           INX                  BRKADDRH = 0
+8962:8E DE 90     1230           STX   BRKADDR+1     FLAGS BREAKPOINT GIVEN
+8965:60           1231           RTS                 
+8966:20 A4 89     1232 MOVE      JSR   A1PCX         F(M) A4<A1.A2M
+8969:A5 FA        1233           LDA   A4L
+896B:A4 FB        1234           LDY   A4H
+896D:20 5C 85     1235           JSR   A3SET
+8970:20 25 01     1236           JSR   PEEK          
+8973:20 1D 01     1237           JSR   YPOKE
+8976:20 88 87     1238           JSR   NXTA4         INCREMENTS A1 AND A4 
+8979:90 EB   8966 1239           BCC   MOVE          CARRY CLEAR IF A1<A2 
+897B:60           1240           RTS                 
+897C:20 A6 89     1241 LIST      JSR   A1PC          F(L) 
+897F:20 2F 85     1242           JSR   SETBREAK      NNNN<300L WILL STOP LIST
+8982:20 7E 80     1243 LIST2     JSR   INSTDSP       AT NNNN
+8985:20 0E 81     1244           JSR   PCADJ          
+8988:20 9D 87     1245           JSR   CTRLC
+898B:F0 16   89A3 1246           BEQ   LISTRTS       CTRL-C = EXIT TO NEXTITM
+898D:A9 70        1247           LDA   #$70          LIST SCROLL RATE
+898F:20 7C 87     1248           JSR   WAIT
+8992:38           1249           SEC                  COMPARE PC TO BRKADDR
+8993:A5 EF        1250           LDA   PCL
+8995:ED DD 90     1251           SBC   BRKADDR
+8998:85 FC        1252           STA   A5L           TEMP USE
+899A:A5 F0        1253           LDA   PCH
+899C:ED DE 90     1254           SBC   BRKADDR+1
+899F:05 FC        1255           ORA   A5L
+89A1:90 DF   8982 1256           BCC   LIST2         TAKEN IF PC < BRKADDR. 
+89A3:60           1257 LISTRTS   RTS                  RTS TO NEXTITM
+89A4:A2 01        1258 A1PCX     LDX   #1
+89A6:8A           1259 A1PC      TXA                  X=0 IF NO # GIVEN
+89A7:F0 0A   89B3 1260           BEQ   RTS6
+89A9:B5 F4        1261 A1PCLP    LDA   A1L,X         X=1
+89AB:95 EF        1262           STA   PCL,X
+89AD:CA           1263           DEX                 
+89AE:10 F9   89A9 1264           BPL   A1PCLP
+89B0:9C C3 90     1265           STZ   JFLG
+89B3:60           1266 RTS6      RTS                 
+89B4:AD 82 C0     1267 SETPRNT   LDA   SWITCH2       F(P)
+89B7:A5 36        1268           LDA   MCSWL         SAVE CURRENT MONITOR
+89B9:A4 37        1269           LDY   MCSWH         OUTPUT HOOK.
+89BB:8D C0 90     1270           STA   CSWL
+89BE:8C C1 90     1271           STY   CSWH
+89C1:A9 01        1272           LDA   #1            EXECUTE PR#1
+89C3:20 95 FE     1273           JSR   OUTPORT
+89C6:A4 36        1274           LDY   MCSWL         RESTORE OLD MONITOR
+89C8:AD C0 90     1275           LDA   CSWL          OUTPUT HOOK AND SET
+89CB:85 36        1276           STA   MCSWL         COUT TO PRINTER BY
+89CD:8C C0 90     1277           STY   CSWL          EXCHANGING CSW'S.
+89D0:A4 37        1278           LDY   MCSWH
+89D2:AD C1 90     1279           LDA   CSWH
+89D5:85 37        1280           STA   MCSWH
+89D7:8C C1 90     1281           STY   CSWH
+89DA:60           1282           RTS
+89DB:20 A6 89     1283 GO        JSR   A1PC          F(G)
+89DE:AD DE 90     1284           LDA   BRKADDR+1     'GO' WITH NO BREAKPOINT
+89E1:F0 03   89E6 1285           BEQ   GOBREAK       GIVEN EXECUTED AS 'JUMP'
+89E3:4C 82 82     1286           JMP   TRCPCG        WITH NO PARM BYTES.
+89E6:A5 FA        1287 GOBREAK   LDA   A4L
+89E8:85 EF        1288           STA   PCL
+89EA:A5 FB        1289           LDA   A4H
+89EC:85 F0        1290           STA   PCH
+89EE:A0 02        1291           LDY   #2            'GO' WITH BRKPOINT GIVEN
+89F0:20 27 01     1292 LOADRT    JSR   YPEEK         SAVES 3 BYTES FROM BREAK
+89F3:99 3D 01     1293           STA   XQT+3,Y       ADDR (XQT+3 = TEMP) AND
+89F6:B9 77 8A     1294           LDA   RTENTRY,Y     PUTS JSR REENTER IN ITS
+89F9:20 EA 84     1295           JSR   YPOKEPC       PLACE WHICH WILL CAUSE
+89FC:88           1296           DEY                  A REAL TIME RE-ENTRY TO
+89FD:10 F1   89F0 1297           BPL   LOADRT        TO ANALYST.
+89FF:A9 4C        1298           LDA   #$4C          PUT JMP PC INTO XQT
+8A01:8D 3A 01     1299           STA   XQT
+8A04:A5 F4        1300           LDA   A1L           A1 = PC
+8A06:8D 3B 01     1301           STA   XQT+1
+8A09:A5 F5        1302           LDA   A1H
+8A0B:8D 3C 01     1303           STA   XQT+2
+8A0E:AE CD 90     1304           LDX   SPNT
+8A11:9A           1305           TXS
+8A12:A2 02        1306 XQJ       LDX   #2
+8A14:BD 23 8A     1307 XQJ2      LDA   INITBL3,X
+8A17:9D 0B 01     1308           STA   XQTS+3,X
+8A1A:CA           1309           DEX
+8A1B:10 F7   8A14 1310           BPL   XQJ2
+8A1D:20 26 8A     1311           JSR   RESTORE
+8A20:4C 08 01     1312           JMP   XQTS
+8A23:4C 3A 01     1313 INITBL3   JMP   XQT           DUMMY STATEMENT
+8A26:AD CC 90     1314 RESTORE   LDA   STATUS        RESTORE REGS
+8A29:48           1315           PHA
+8A2A:20 47 8A     1316           JSR   ZSWAPT        GET PROGRAM 0 PAGE 
+8A2D:AD C9 90     1317           LDA   ACC
+8A30:AE CA 90     1318           LDX   XREG
+8A33:AC CB 90     1319           LDY   YREG
+8A36:28           1320           PLP
+8A37:60           1321           RTS
+8A38:08           1322 SAVE      PHP                 
+8A39:8D C9 90     1323           STA   ACC           
+8A3C:68           1324           PLA                 
+8A3D:8D CC 90     1325           STA   STATUS        
+8A40:D8           1326           CLD
+8A41:8E CA 90     1327           STX   XREG
+8A44:8C CB 90     1328           STY   YREG
+8A47:A5 F3        1329 ZSWAPT    LDA   ZFLG          SWAP ALL IF ZFLG = $AA
+8A49:C9 AA        1330           CMP   #$AA          ELSE SWAP ONLY PCL-BASH
+8A4B:D0 03   8A50 1331           BNE   ZSWAPS
+8A4D:A2 10        1332 ZSWAP     LDX   #BAS2H-PCL    SWAP ALL
+8A4F:2C           1333           DFB   $2C
+8A50:A2 03        1334 ZSWAPS    LDX   #BASH-PCL
+8A52:B5 EF        1335 ZSWP1     LDA   PCL,X
+8A54:BC E4 90     1336           LDY   ZBUF,X
+8A57:94 EF        1337           STY   PCL,X
+8A59:9D E4 90     1338           STA   ZBUF,X
+8A5C:CA           1339           DEX
+8A5D:10 F3   8A52 1340           BPL   ZSWP1         
+8A5F:60           1341 ZSWAPRTS  RTS
+8A60:A5 F3        1342 ZSWAPE    LDA   ZFLG          SWAP ZFLG-BAS2H IF ID
+8A62:C9 AA        1343           CMP   #$AA          NOT PRESENT.
+8A64:F0 F9   8A5F 1344           BEQ   ZSWAPRTS
+8A66:20 4D 8A     1345           JSR   ZSWAP         SWAP ZFLG-BAS2H ONLY.
+8A69:80 E5   8A50 1346           BRA   ZSWAPS
+8A6B:A2 37        1347 INITXQTS  LDX   #55
+8A6D:BD F7 84     1348 INITXQ2   LDA   INITBL,X
+8A70:9D 02 01     1349           STA   WARMV,X
+8A73:CA           1350           DEX
+8A74:10 F7   8A6D 1351           BPL   INITXQ2
+8A76:60           1352           RTS
+8A77:20 02 01     1353 RTENTRY   JSR   WARMV         DUMMY STATEMENT.
+8A7A:20 38 8A     1354 REENTER   JSR   SAVE          REAL-TIME RE-ENTRY
+8A7D:20 60 8A     1355           JSR   ZSWAPE        WHICH IS CALLED AS
+8A80:68           1356           PLA                  A SUBROUTINE WITH PLA
+8A81:38           1357           SEC                  PLA TO SET PC FROM
+8A82:E9 02        1358           SBC   #2            CALLER ADDRESS. RESTORES
+8A84:85 EF        1359           STA   PCL           ORIGINAL 3 BYTES TO BREAK
+8A86:68           1360           PLA                  ADDRESS.
+8A87:E9 00        1361           SBC   #0
+8A89:85 F0        1362           STA   PCH
+8A8B:BA           1363           TSX
+8A8C:8E CD 90     1364           STX   SPNT
+8A8F:A0 02        1365           LDY   #2
+8A91:B9 3D 01     1366 RTREST    LDA   XQT+3,Y
+8A94:20 EA 84     1367           JSR   YPOKEPC
+8A97:88           1368           DEY
+8A98:10 F7   8A91 1369           BPL   RTREST
+8A9A:20 FE 85     1370           JSR   SAVEPC
+8A9D:D8           1371 RESET     CLD                 
+8A9E:A2 FF        1372           LDX   #$FF
+8AA0:9A           1373           TXS
+8AA1:A5 F3        1374           LDA   ZFLG
+8AA3:C9 AA        1375           CMP   #$AA
+8AA5:F0 07   8AAE 1376           BEQ   RST2          IF ID NOT PRESENT 
+8AA7:20 4D 8A     1377           JSR   ZSWAP         THEN SWAP 0 PAGE 
+8AAA:A9 AA        1378           LDA   #$AA          & SET ID --> ZFLG:AA 
+8AAC:85 F3        1379           STA   ZFLG
+8AAE:20 6B 8A     1380 RST2      JSR   INITXQTS
+8AB1:9C C2 90     1381           STZ   TFLG
+8AB4:9C C3 90     1382           STZ   JFLG
+8AB7:20 63 8E     1383 TXTMON    JSR   TEXT
+8ABA:20 E1 86     1384           JSR   HOME
+8ABD:20 0C 8F     1385           JSR   PRTITLE
+8AC0:9C C6 90     1386 MONZ      STZ   ERRFLG
+8AC3:CE DE 90     1387           DEC   BRKADDR+1     INSURE BRKPOINT CLEARED
+8AC6:20 3F 8E     1388           JSR   CHKVID        MATCH HOOKS W/DISPLAY MODE
+8AC9:20 2A 8E     1389           JSR   STPRMPT
+8ACC:20 17 88     1390           JSR   GETLNZ        
+8ACF:20 39 8B     1391           JSR   ZMODE
+8AD2:9C D9 90     1392           STZ   DSPTOP        DISPLAY AT TOP
+8AD5:20 14 8B     1393 NXTITM    JSR   GETNUM        HANDLE HEX DIGS TO 1ST 
+8AD8:8C DA 90     1394           STY   YSAV          NON-HEX CHAR+1 (Y=INDX)
+8ADB:A0 1C        1395           LDY   #SUBTBL-CHRTBL 
+8ADD:88           1396 CHRSRCH   DEY                  ACC = F(ACC) 
+8ADE:30 11   8AF1 1397           BMI   SYNERR
+8AE0:D9 65 90     1398           CMP   CHRTBL,Y
+8AE3:D0 F8   8ADD 1399           BNE   CHRSRCH
+8AE5:5A           1400           PHY
+8AE6:20 2B 8B     1401           JSR   TOSUB
+8AE9:7A           1402           PLY
+8AEA:F0 D4   8AC0 1403           BEQ   MONZ          0 = OFFSET FOR F(CR)
+8AEC:AC DA 90     1404 NEXTITM   LDY   YSAV
+8AEF:80 E4   8AD5 1405           BRA   NXTITM
+8AF1:20 25 86     1406 SYNERR    JSR   BELL
+8AF4:80 CA   8AC0 1407           BRA   MONZ
+8AF6:A2 03        1408 DIG       LDX   #$03          HEX DIGIT NOW IN ACC LO 
+8AF8:0A           1409           ASL   A             NIBBLE. KEYS 0-9=00-09 
+8AF9:0A           1410           ASL   A             KEYS A-F=FA-FF. MOVE 
+8AFA:0A           1411           ASL   A             LO NIBBLE TO HI NIBBLE 
+8AFB:0A           1412           ASL   A
+8AFC:0A           1413 NXTBIT    ASL   A             4 BIT HEX DIG. INTO A2L 
+8AFD:26 F6        1414           ROL   A2L           A2L TO A2H 
+8AFF:26 F7        1415           ROL   A2H
+8B01:CA           1416           DEX                 
+8B02:10 F8   8AFC 1417           BPL   NXTBIT
+8B04:AD D3 90     1418 NXTBAS    LDA   MODE
+8B07:D0 06   8B0F 1419           BNE   NXTBS2        IF MODE=0 COPY 
+8B09:B5 F7        1420           LDA   A2H,X         A2 TO A1 & A3
+8B0B:95 F5        1421           STA   A1H,X
+8B0D:95 F9        1422           STA   A3H,X
+8B0F:E8           1423 NXTBS2    INX                 
+8B10:F0 F2   8B04 1424           BEQ   NXTBAS
+8B12:D0 06   8B1A 1425           BNE   NXTCHR
+8B14:A2 00        1426 GETNUM    LDX   #0
+8B16:86 F6        1427           STX   A2L
+8B18:86 F7        1428           STX   A2H
+8B1A:B9 6C 01     1429 NXTCHR    LDA   IN,Y          F(ACC) = ACC EOR $B0
+8B1D:C8           1430           INY                  ADC $88 (CARRY SET)
+8B1E:49 B0        1431           EOR   #$B0          KEYS 0-9=$00-09 
+8B20:C9 0A        1432           CMP   #$0A
+8B22:90 D2   8AF6 1433           BCC   DIG           TAKEN IF KEYS 0-9 
+8B24:69 88        1434           ADC   #$88          KEYS A-F=$FA-FF 
+8B26:C9 FA        1435           CMP   #$FA          
+8B28:B0 CC   8AF6 1436           BCS   DIG           TAKEN IF KEYS A-F 
+8B2A:60           1437           RTS                 
+8B2B:98           1438 TOSUB     TYA                  # OF FUNCTION (START=0)
+8B2C:0A           1439           ASL   A             MULT BY 2 
+8B2D:A8           1440           TAY
+8B2E:B9 82 90     1441           LDA   SUBTBL+1,Y    
+8B31:48           1442           PHA
+8B32:B9 81 90     1443           LDA   SUBTBL,Y
+8B35:48           1444           PHA                 
+8B36:AD D3 90     1445           LDA   MODE          OLD MODE FOR F(CR)&F( ) 
+8B39:A0 00        1446 ZMODE     LDY   #$00
+8B3B:8C D3 90     1447           STY   MODE
+8B3E:60           1448           RTS                  RTS TO SUBROUTINE 
+8B3F:AD C3 90     1449 EXECJSR   LDA   JFLG          F(J)
+8B42:D0 03   8B47 1450           BNE   GOJSR         'J' WITH NO JSR?
+8B44:4C 25 86     1451 ERRJ      JMP   BELL          RTS TO NEXTITM VIA BELL.
+8B47:AC DA 90     1452 GOJSR     LDY   YSAV          GET # OF PARM BYTES
+8B4A:20 14 8B     1453           JSR   GETNUM
+8B4D:88           1454           DEY
+8B4E:8C DA 90     1455           STY   YSAV
+8B51:A5 F7        1456           LDA   A2H
+8B53:D0 EF   8B44 1457           BNE   ERRJ
+8B55:A5 F6        1458           LDA   A2L
+8B57:C9 0A        1459           CMP   #10
+8B59:B0 E9   8B44 1460           BCS   ERRJ          ONLY 9 PARM BYTES MAX
+8B5B:A8           1461           TAY                  SAVE BYTE COUNT 
+8B5C:A2 11        1462 GOPC      LDX   #17           
+8B5E:BD 99 8B     1463 XQINIT2   LDA   INITBL2,X     FILL DUMMY BLOCK
+8B61:9D 3A 01     1464           STA   XQT,X
+8B64:CA           1465           DEX
+8B65:10 F7   8B5E 1466           BPL   XQINIT2
+8B67:A5 EF        1467           LDA   PCL           MOVE JSR ADDR TO XQT
+8B69:8D 3B 01     1468 XQLOC1    STA   XQT+1
+8B6C:A5 F0        1469           LDA   PCH
+8B6E:8D 3C 01     1470           STA   XQT+2
+8B71:AE CD 90     1471           LDX   SPNT          SET PC = PARM LIST - 1 
+8B74:E8           1472           INX
+8B75:BD 00 91     1473           LDA   STACK,X
+8B78:85 EF        1474           STA   PCL
+8B7A:E8           1475           INX
+8B7B:BD 00 91     1476           LDA   STACK,X
+8B7E:85 F0        1477           STA   PCH
+8B80:8E CD 90     1478           STX   SPNT
+8B83:98           1479           TYA                  GET PARM BYTES 
+8B84:AA           1480           TAX
+8B85:F0 09   8B90 1481           BEQ   MVPRM1        NO PARM BYTES TO MOVE
+8B87:20 27 01     1482 MOVPARM   JSR   YPEEK         MOVE PARM LIST TO DUMMY
+8B8A:99 3C 01     1483           STA   XQT+2,Y       
+8B8D:88           1484           DEY                 
+8B8E:D0 F7   8B87 1485           BNE   MOVPARM
+8B90:E8           1486 MVPRM1    INX                 
+8B91:8A           1487           TXA                  ADJ PC TO POINT TO INST 
+8B92:18           1488           CLC                  FOLLOWING PARM LIST
+8B93:20 12 81     1489           JSR   PCADJAP
+8B96:4C 12 8A     1490           JMP   XQJ           EXECUTE JSR IMMED. MODE
+8B99:20 00 00     1491 INITBL2   JSR   $0000         DUMMY BLOCK FOR F(J)
+8B9C:EA           1492           NOP                  9 NOP'S FOR PARM BYTES
+8B9D:EA           1493           NOP
+8B9E:EA           1494           NOP
+8B9F:EA           1495           NOP
+8BA0:EA           1496           NOP
+8BA1:EA           1497           NOP
+8BA2:EA           1498           NOP
+8BA3:EA           1499           NOP
+8BA4:EA           1500           NOP
+8BA5:20 2C 01     1501           JSR   XQTS+36       RESTORE ANALYST R/W
+8BA8:4C AB 8B     1502           JMP   JRTS
+8BAB:20 38 8A     1503 JRTS      JSR   SAVE
+8BAE:20 3F 8E     1504           JSR   CHKVID
+8BB1:AD C3 90     1505           LDA   JFLG
+8BB4:F0 14   8BCA 1506           BEQ   JRTS3         DURING 'G0' W/O BREAK
+8BB6:9C C3 90     1507           STZ   JFLG
+8BB9:AD C2 90     1508           LDA   TFLG
+8BBC:F0 03   8BC1 1509           BEQ   JRTS2         DURING 'STEP'
+8BBE:4C 9F 82     1510           JMP   TRACE5        DURING TRACE IMMEDIATE
+8BC1:CE D9 90     1511 JRTS2     DEC   DSPTOP        UPDATE REGDSP AFTER JSR.
+8BC4:20 51 87     1512 JRTSX     JSR   CLEARDSP      'SKIP' ENTERS HERE
+8BC7:4C F4 82     1513           JMP   NXTPC
+8BCA:60           1514 JRTS3     RTS                  RTS TO NEXTITM.
+8BCB:A9 FF        1515 FIND      LDA   #$FF          F(CTRL-F) A4<A1 CTRL-F
+8BCD:85 F4        1516           STA   A1L           HEX SEQUENCE FINDER
+8BCF:85 FA        1517           STA   A4L
+8BD1:C6 FB        1518           DEC   A4H
+8BD3:A6 FC        1519           LDX   A5L
+8BD5:8E 3A 01     1520           STX   XQT           BYTE COUNT
+8BD8:CA           1521           DEX
+8BD9:D0 08   8BE3 1522           BNE   FXEND
+8BDB:A5 F5        1523           LDA   A1H
+8BDD:C9 FF        1524           CMP   #$FF
+8BDF:D0 02   8BE3 1525           BNE   FXEND
+8BE1:C6 F4        1526           DEC   A1L
+8BE3:C6 F4        1527 FXEND     DEC   A1L
+8BE5:CA           1528           DEX
+8BE6:D0 FB   8BE3 1529           BNE   FXEND
+8BE8:E6 FA        1530 INCBAS    INC   A4L
+8BEA:D0 0A   8BF6 1531           BNE   TESTEND
+8BEC:E6 FB        1532           INC   A4H
+8BEE:A5 FB        1533           LDA   A4H
+8BF0:C9 C0        1534           CMP   #$C0
+8BF2:D0 02   8BF6 1535           BNE   TESTEND
+8BF4:E6 FB        1536           INC   A4H
+8BF6:A5 F5        1537 TESTEND   LDA   A1H
+8BF8:C5 FB        1538           CMP   A4H
+8BFA:90 42   8C3E 1539           BCC   DONE
+8BFC:D0 06   8C04 1540           BNE   SETTMP
+8BFE:A5 F4        1541           LDA   A1L
+8C00:C5 FA        1542           CMP   A4L
+8C02:90 3A   8C3E 1543           BCC   DONE
+8C04:A5 FB        1544 SETTMP    LDA   A4H
+8C06:85 F0        1545           STA   PCH
+8C08:A5 FA        1546           LDA   A4L
+8C0A:18           1547           CLC
+8C0B:6D 3A 01     1548           ADC   XQT
+8C0E:85 EF        1549           STA   PCL
+8C10:90 02   8C14 1550           BCC   SETX
+8C12:E6 F0        1551           INC   PCH
+8C14:AE 3A 01     1552 SETX      LDX   XQT
+8C17:E8           1553           INX
+8C18:38           1554 CHGTMP    SEC
+8C19:A5 EF        1555           LDA   PCL
+8C1B:E9 01        1556           SBC   #$01
+8C1D:85 EF        1557           STA   PCL
+8C1F:B0 02   8C23 1558           BCS   CMPNUM
+8C21:C6 F0        1559           DEC   PCH
+8C23:20 25 01     1560 CMPNUM    JSR   PEEK
+8C26:CA           1561           DEX
+8C27:DD 3A 01     1562           CMP   XQT,X
+8C2A:D0 BC   8BE8 1563           BNE   INCBAS
+8C2C:A5 EF        1564           LDA   PCL
+8C2E:C5 FA        1565           CMP   A4L
+8C30:D0 E6   8C18 1566           BNE   CHGTMP
+8C32:A6 FA        1567           LDX   A4L
+8C34:A5 FB        1568           LDA   A4H
+8C36:20 FE 80     1569           JSR   PRNTAX
+8C39:20 50 88     1570           JSR   OUTSP         
+8C3C:80 AA   8BE8 1571           BRA   INCBAS
+8C3E:4C 4C 88     1572 DONE      JMP   CROUT         
+ 
+8C41:             1574 *** THE MINI-ASSEMBLER ***
+ 
+8C41:E9 81        1576 RELADR    SBC   #$81
+8C43:4A           1577           LSR   A
+8C44:D0 14   8C5A 1578           BNE   PCERR
+8C46:A4 F7        1579           LDY   A2H
+8C48:A6 F6        1580           LDX   A2L
+8C4A:D0 01   8C4D 1581           BNE   RELADJ
+8C4C:88           1582           DEY                 
+8C4D:CA           1583 RELADJ    DEX                 
+8C4E:8A           1584           TXA                 
+8C4F:18           1585           CLC                 
+8C50:E5 EF        1586           SBC   PCL
+8C52:85 F6        1587           STA   A2L
+8C54:10 01   8C57 1588           BPL   RELADJ2
+8C56:C8           1589           INY                 
+8C57:98           1590 RELADJ2   TYA                 
+8C58:E5 F0        1591           SBC   PCH
+8C5A:D0 4A   8CA6 1592 PCERR     BNE   ERRAT
+8C5C:AC D1 90     1593 POKEAT    LDY   LENGTH
+8C5F:B6 F5        1594 POKE      LDX   A1H,Y
+8C61:8A           1595           TXA                 
+8C62:20 EA 84     1596           JSR   YPOKEPC
+8C65:88           1597           DEY                 
+8C66:10 F7   8C5F 1598           BPL   POKE
+8C68:20 75 86     1599           JSR   UP
+8C6B:20 75 86     1600           JSR   UP
+8C6E:20 7E 80     1601           JSR   INSTDSP
+8C71:20 16 87     1602           JSR   CLREOL
+8C74:20 0E 81     1603           JSR   PCADJ
+8C77:80 3D   8CB6 1604           BRA   MINI
+8C79:A5 F5        1605 DSS       LDA   A1H
+8C7B:20 13 80     1606           JSR   INSDS2
+8C7E:AA           1607           TAX                 
+8C7F:BD 7E 8F     1608           LDA   MNEMR,X
+8C82:C5 FA        1609           CMP   A4L
+8C84:D0 15   8C9B 1610           BNE   NXOPC
+8C86:BD 3E 8F     1611           LDA   MNEML,X
+8C89:C5 FB        1612           CMP   A4H
+8C8B:D0 0E   8C9B 1613           BNE   NXOPC
+8C8D:A5 FC        1614           LDA   A5L
+8C8F:AC D2 90     1615           LDY   FORMAT
+8C92:C0 9D        1616           CPY   #$9D
+8C94:F0 AB   8C41 1617           BEQ   RELADR
+8C96:CD D2 90     1618           CMP   FORMAT
+8C99:F0 C1   8C5C 1619           BEQ   POKEAT
+8C9B:C6 F5        1620 NXOPC     DEC   A1H
+8C9D:D0 DA   8C79 1621           BNE   DSS
+8C9F:E6 FC        1622           INC   A5L
+8CA1:CE DB 90     1623           DEC   YSAV1
+8CA4:F0 D3   8C79 1624           BEQ   DSS
+8CA6:AC DA 90     1625 ERRAT     LDY   YSAV
+8CA9:98           1626 ERROR     TYA                 
+8CAA:AA           1627           TAX                 
+8CAB:20 07 81     1628           JSR   PRBLNK
+8CAE:A9 DE        1629           LDA   #$DE
+8CB0:20 F5 88     1630           JSR   COUT
+8CB3:20 25 86     1631           JSR   BELL
+8CB6:20 33 8E     1632 MINI      JSR   EPROMPT       '!' PROMPT
+8CB9:20 17 88     1633           JSR   GETLNZ
+8CBC:20 39 8B     1634           JSR   ZMODE
+8CBF:AD 6C 01     1635           LDA   IN
+8CC2:C9 A0        1636           CMP   #$A0
+8CC4:F0 16   8CDC 1637           BEQ   RDMNEM
+8CC6:8A           1638           TXA
+8CC7:D0 06   8CCF 1639           BNE   MINI2
+8CC9:8D DA 90     1640           STA   YSAV          <CR> ALONE EXITS
+8CCC:4C 2A 8E     1641           JMP   STPRMPT       VIA NEXTITM
+8CCF:20 14 8B     1642 MINI2     JSR   GETNUM
+8CD2:C9 93        1643           CMP   #$93          F(:) 
+8CD4:D0 D3   8CA9 1644 A1TOPC    BNE   ERROR
+8CD6:8A           1645           TXA                 
+8CD7:F0 D0   8CA9 1646           BEQ   ERROR
+8CD9:20 A9 89     1647           JSR   A1PCLP
+8CDC:A9 03        1648 RDMNEM    LDA   #$03          INDEX FOR 3 CHAR MNEM 
+8CDE:85 F5        1649           STA   A1H
+8CE0:20 5C 8D     1650 RDMNEM2   JSR   CHARIN
+8CE3:0A           1651           ASL   A
+8CE4:E9 BE        1652           SBC   #$BE
+8CE6:C9 C2        1653           CMP   #$C2          LESS THAN 'A' 
+8CE8:90 BF   8CA9 1654           BCC   ERROR         NOT ASC LETTER SO ERR 
+8CEA:0A           1655           ASL   A
+8CEB:0A           1656           ASL   A
+8CEC:A2 04        1657           LDX   #$04          INDEX FOR 5 BITS 
+8CEE:0A           1658 RDMNEM3   ASL   A             MOVE 5 BIT LETTER CODE 
+8CEF:26 FA        1659           ROL   A4L           (* 3 LETTERS) INTO A4. 
+8CF1:26 FB        1660           ROL   A4H           26 LETTERS REQ. 5 BITS 
+8CF3:CA           1661           DEX                 
+8CF4:10 F8   8CEE 1662           BPL   RDMNEM3
+8CF6:C6 F5        1663           DEC   A1H
+8CF8:F0 F4   8CEE 1664           BEQ   RDMNEM3
+8CFA:10 E4   8CE0 1665           BPL   RDMNEM2
+8CFC:A2 05        1666           LDX   #$05          INDEX FOR 6 FORMAT BITS 
+8CFE:20 5C 8D     1667 RDFMT     JSR   CHARIN
+8D01:8C DA 90     1668           STY   YSAV
+8D04:DD BE 8F     1669           CMP   CHAR1,X
+8D07:D0 14   8D1D 1670           BNE   RDFMT2
+8D09:20 5C 8D     1671           JSR   CHARIN
+8D0C:DD C4 8F     1672           CMP   CHAR2,X
+8D0F:F0 0E   8D1F 1673           BEQ   RDADDR
+8D11:BD C4 8F     1674           LDA   CHAR2,X
+8D14:F0 08   8D1E 1675           BEQ   RDFMT3
+8D16:C9 A4        1676           CMP   #$A4
+8D18:F0 04   8D1E 1677           BEQ   RDFMT3
+8D1A:AC DA 90     1678           LDY   YSAV
+8D1D:18           1679 RDFMT2    CLC                 
+8D1E:88           1680 RDFMT3    DEY                 
+8D1F:26 FC        1681 RDADDR    ROL   A5L
+8D21:E0 03        1682           CPX   #$03
+8D23:D0 0E   8D33 1683           BNE   RDADDR3
+8D25:20 14 8B     1684           JSR   GETNUM
+8D28:A5 F7        1685           LDA   A2H
+8D2A:F0 01   8D2D 1686           BEQ   RDADDR2
+8D2C:E8           1687           INX                 
+8D2D:8E DB 90     1688 RDADDR2   STX   YSAV1
+8D30:A2 03        1689           LDX   #$03
+8D32:88           1690           DEY                 
+8D33:86 F5        1691 RDADDR3   STX   A1H
+8D35:CA           1692           DEX                 
+8D36:10 C6   8CFE 1693           BPL   RDFMT
+8D38:A5 FC        1694           LDA   A5L
+8D3A:0A           1695           ASL   A
+8D3B:0A           1696           ASL   A
+8D3C:0D DB 90     1697           ORA   YSAV1
+8D3F:C9 20        1698           CMP   #$20
+8D41:B0 07   8D4A 1699           BCS   RDADDR4
+8D43:AE DB 90     1700           LDX   YSAV1
+8D46:F0 02   8D4A 1701           BEQ   RDADDR4
+8D48:09 80        1702           ORA   #$80
+8D4A:85 FC        1703 RDADDR4   STA   A5L
+8D4C:8C DA 90     1704           STY   YSAV
+8D4F:B9 6C 01     1705           LDA   IN,Y
+8D52:C9 8D        1706           CMP   #$8D
+8D54:F0 03   8D59 1707           BEQ   DISAS
+8D56:4C D4 8C     1708           JMP   A1TOPC
+8D59:4C 79 8C     1709 DISAS     JMP   DSS
+8D5C:B9 6C 01     1710 CHARIN    LDA   IN,Y
+8D5F:C8           1711           INY                 
+8D60:C9 A0        1712           CMP   #$A0
+8D62:F0 F8   8D5C 1713           BEQ   CHARIN
+8D64:60           1714 ENDMINI   RTS                 
+8D65:AD BC 90     1715 RELOC     LDA   STARTLOC+1    F(R)
+8D68:85 F0        1716           STA   PCH
+8D6A:64 EF        1717           STZ   PCL           MAKE SURE ANALYST IS
+8D6C:20 25 01     1718           JSR   PEEK          BEING READ FOR MOVE
+8D6F:C9 4C        1719           CMP   #$4C          BY PEEKING START BYTE.
+8D71:D0 F1   8D64 1720           BNE   ENDMINI       DO NOT RELOCATE!
+8D73:A5 F5        1721           LDA   A1H
+8D75:85 FB        1722           STA   A4H
+8D77:48           1723           PHA
+8D78:64 FA        1724           STZ   A4L
+8D7A:AD BC 90     1725           LDA   STARTLOC+1
+8D7D:85 F5        1726           STA   A1H
+8D7F:85 FC        1727           STA   A5L
+8D81:64 F4        1728           STZ   A1L
+8D83:AD BF 90     1729           LDA   AUXV+2        LOCATION OF 'AUXLOAD'
+8D86:85 F7        1730           STA   A2H           WHICH MARKS END.
+8D88:AD BE 90     1731           LDA   AUXV+1
+8D8B:85 F6        1732           STA   A2L
+8D8D:A5 F5        1733           LDA   A1H           CALC DIFFERENCE BETWEEN
+8D8F:38           1734           SEC                  OLD & NEW ORG
+8D90:E5 FB        1735           SBC   A4H
+8D92:85 FD        1736           STA   A5H
+8D94:A9 3C        1737           LDA   #AUXV-SUBTBL
+8D96:4A           1738           LSR   A             DIVIDE BY 2
+8D97:A8           1739           TAY                  # OF WORDS
+8D98:A2 FF        1740           LDX   #$FF
+8D9A:E8           1741 RELOC2    INX                  CONVERT SUBTBL WORDS
+8D9B:E8           1742           INX
+8D9C:BD 81 90     1743           LDA   SUBTBL,X
+8D9F:38           1744           SEC
+8DA0:E5 FD        1745           SBC   A5H
+8DA2:9D 81 90     1746           STA   SUBTBL,X
+8DA5:88           1747           DEY
+8DA6:D0 F2   8D9A 1748           BNE   RELOC2
+8DA8:A9 60        1749           LDA   #$60          PUT IN RTS TO DISABLE
+8DAA:8D BD 90     1750           STA   AUXV          AUX LOADER. NOT MOVED.
+8DAD:20 66 89     1751           JSR   MOVE          NEW ORG<START.IN
+8DB0:68           1752           PLA
+8DB1:85 F0        1753           STA   PCH
+8DB3:8D FA 8D     1754           STA   NEWGO+2
+8DB6:64 EF        1755           STZ   PCL           PAGE BOUNDARY ONLY.
+8DB8:E6 F7        1756           INC   A2H
+8DBA:AD 0F 8F     1757           LDA   TITLLOC+1     END OF STATIC PGM AREA
+8DBD:85 FA        1758           STA   A4L
+8DBF:AD 10 8F     1759           LDA   TITLLOC+2
+8DC2:38           1760           SEC
+8DC3:E5 FD        1761           SBC   A5H
+8DC5:85 FB        1762           STA   A4H
+8DC7:20 10 80     1763 RELOC3    JSR   INSDST
+8DCA:AC D1 90     1764           LDY   LENGTH
+8DCD:C0 02        1765           CPY   #2            3-BYTE INSTRUCTION ?
+8DCF:90 1D   8DEE 1766           BCC   NABS
+8DD1:20 25 01     1767           JSR   PEEK
+8DD4:C9 2C        1768           CMP   #$2C
+8DD6:F0 16   8DEE 1769           BEQ   NABS          IGNORE BIT ABSOLUTE
+8DD8:A0 02        1770           LDY   #2            LENGTH
+8DDA:20 27 01     1771           JSR   YPEEK
+8DDD:A6 F7        1772           LDX   A2H           IF OLD END WAS $FFNN
+8DDF:F0 04   8DE5 1773           BEQ   CHKLO         THEN DON'T CHECK ABOVE !!
+8DE1:C5 F7        1774           CMP   A2H           SEE IF WITHIN OLD
+8DE3:B0 09   8DEE 1775           BCS   NABS          START-END.
+8DE5:C5 FC        1776 CHKLO     CMP   A5L
+8DE7:90 05   8DEE 1777           BCC   NABS
+8DE9:E5 FD        1778           SBC   A5H           CONVERT TO NEW ADDR
+8DEB:20 EA 84     1779           JSR   YPOKEPC
+8DEE:20 0E 81     1780 NABS      JSR   PCADJ
+8DF1:C5 FA        1781           CMP   A4L           SEE IF PC < NEW END OF
+8DF3:98           1782           TYA                  STATIC PGM AREA. Y=PCH
+8DF4:E5 FB        1783           SBC   A4H
+8DF6:90 CF   8DC7 1784           BCC   RELOC3
+8DF8:4C 00 80     1785 NEWGO     JMP   START         RUN NEW ORG
+8DFB:8A           1786 SETDOS    TXA                  F(/) SET OR PRINT DOS
+8DFC:D0 0C   8E0A 1787           BNE   SETDS2        SUBROUTINE TO JSR IMMED.
+8DFE:AD C5 90     1788           LDA   DOSCALL+1     '/' ALONE PRINTS ADDRESS
+8E01:AE C4 90     1789           LDX   DOSCALL
+8E04:20 FE 80     1790           JSR   PRNTAX
+8E07:4C 4C 88     1791           JMP   CROUT
+8E0A:B5 F4        1792 SETDS2    LDA   A1L,X         NNNN/ COPIES NNNN INTO
+8E0C:9D C4 90     1793           STA   DOSCALL,X     DOSCALL
+8E0F:CA           1794           DEX
+8E10:10 F8   8E0A 1795           BPL   SETDS2
+8E12:60           1796           RTS
+8E13:AD D6 90     1797 AUXRW     LDA   PROMPT        F(X) TOGGLE BETWEEN
+8E16:C9 A3        1798           CMP   #$A3          MAIN/AUX $200-BFFF R/W
+8E18:D0 06   8E20 1799           BNE   AUX2MAIN
+8E1A:A9 03        1800           LDA   #$03
+8E1C:A0 05        1801           LDY   #$05
+8E1E:80 04   8E24 1802           BRA   RWSET
+8E20:A9 02        1803 AUX2MAIN  LDA   #$02
+8E22:A0 04        1804           LDY   #$04
+8E24:8D 34 01     1805 RWSET     STA   XQTS+44
+8E27:8C 37 01     1806           STY   XQTS+47
+8E2A:AD 34 01     1807 STPRMPT   LDA   XQTS+44
+8E2D:4A           1808           LSR   A
+8E2E:90 09   8E39 1809           BCC   SPROMPT
+8E30:A9 FD        1810           LDA   #$FD          '}'
+8E32:2C           1811           DFB   $2C
+8E33:A9 A1        1812 EPROMPT   LDA   #$A1          '!'
+8E35:2C           1813           DFB   $2C
+8E36:A9 A4        1814 DPROMPT   LDA   #$A4          '$'
+8E38:2C           1815           DFB   $2C
+8E39:A9 A3        1816 SPROMPT   LDA   #$A3          '#'
+8E3B:8D D6 90     1817           STA   PROMPT
+8E3E:60           1818           RTS
+8E3F:AD 1F C0     1819 CHKVID    LDA   RD80VID       RESET 40/80 COL IF NEEDED
+8E42:0A           1820           ASL   A             BIT 7 INTO CARRY
+8E43:AD D4 90     1821           LDA   FLG8
+8E46:30 04   8E4C 1822           BMI   CHK80
+8E48:90 04   8E4E 1823           BCC   RTS7
+8E4A:B0 2E   8E7A 1824           BCS   SET80         40 -> 80
+8E4C:90 6A   8EB8 1825 CHK80     BCC   SET40         80 -> 40
+8E4E:60           1826 RTS7      RTS
+8E4F:AC DA 90     1827 SETVID    LDY   YSAV          F(@)
+8E52:B9 6C 01     1828           LDA   IN,Y
+8E55:EE DA 90     1829           INC   YSAV
+8E58:C9 B4        1830           CMP   #$B4          '4'
+8E5A:F0 5C   8EB8 1831           BEQ   SET40
+8E5C:C9 B8        1832           CMP   #$B8          '8'
+8E5E:F0 1A   8E7A 1833           BEQ   SET80
+8E60:CE DA 90     1834           DEC   YSAV          @ ALONE
+8E63:AD B9 90     1835 TEXT      LDA   OUTVECT
+8E66:8D C0 90     1836           STA   CSWL
+8E69:AD BA 90     1837           LDA   OUTVECT+1
+8E6C:8D C1 90     1838           STA   CSWH
+8E6F:8D 01 C0     1839           STA   INHPAGE2      FOR AUX TO DISPLAY TEXT.
+8E72:8D 51 C0     1840           STA   TXTSET
+8E75:AD 1F C0     1841           LDA   RD80VID       SET 40 OR 80 COL
+8E78:10 3E   8EB8 1842           BPL   SET40         TEXT BASED ON RD80VID
+8E7A:A9 FF        1843 SET80     LDA   #$FF
+8E7C:8D D4 90     1844           STA   FLG8
+8E7F:A9 50        1845           LDA   #80
+8E81:8D D5 90     1846           STA   WNDWDTH
+8E84:2C 1F C0     1847           BIT   RD80VID
+8E87:30 2D   8EB6 1848           BMI   SET8D
+8E89:8D 0D C0     1849           STA   SET80VID
+8E8C:A9 00        1850           LDA   #$00
+8E8E:48           1851 SET8A     PHA                 
+8E8F:20 FE 86     1852           JSR   VTABZ
+8E92:A0 00        1853           LDY   #$00
+8E94:B1 F1        1854 SET8B     LDA   (BASL),Y
+8E96:AA           1855           TAX
+8E97:5A           1856           PHY                 
+8E98:98           1857           TYA                 
+8E99:4A           1858           LSR   A
+8E9A:A8           1859           TAY                 
+8E9B:B0 03   8EA0 1860           BCS   SET8C
+8E9D:8D 55 C0     1861           STA   HISCR
+8EA0:8A           1862 SET8C     TXA                 
+8EA1:91 F1        1863           STA   (BASL),Y
+8EA3:7A           1864           PLY                 
+8EA4:8D 54 C0     1865           STA   LOWSCR
+8EA7:C8           1866           INY                 
+8EA8:C0 28        1867           CPY   #$28
+8EAA:90 E8   8E94 1868           BCC   SET8B
+8EAC:98           1869           TYA                 
+8EAD:20 19 87     1870           JSR   CLEOLZ
+8EB0:68           1871           PLA                 
+8EB1:1A           1872           INC   A
+8EB2:C9 18        1873           CMP   #$18
+8EB4:90 D8   8E8E 1874           BCC   SET8A
+8EB6:80 32   8EEA 1875 SET8D     BRA   SETDONE
+8EB8:9C D4 90     1876 SET40     STZ   FLG8
+8EBB:2C 1F C0     1877           BIT   RD80VID
+8EBE:10 25   8EE5 1878           BPL   SET4D
+8EC0:8D 0C C0     1879           STA   CLR80VID
+8EC3:A9 00        1880           LDA   #$00
+8EC5:48           1881 SET4A     PHA                 
+8EC6:20 FE 86     1882           JSR   VTABZ
+8EC9:A0 27        1883           LDY   #$27
+8ECB:98           1884 SET4B     TYA                 
+8ECC:4A           1885           LSR   A
+8ECD:5A           1886           PHY                 
+8ECE:A8           1887           TAY                 
+8ECF:B0 03   8ED4 1888           BCS   SET4C
+8ED1:8D 55 C0     1889           STA   HISCR
+8ED4:B1 F1        1890 SET4C     LDA   (BASL),Y
+8ED6:7A           1891           PLY                 
+8ED7:8D 54 C0     1892           STA   LOWSCR
+8EDA:91 F1        1893           STA   (BASL),Y
+8EDC:88           1894           DEY                 
+8EDD:10 EC   8ECB 1895           BPL   SET4B
+8EDF:68           1896           PLA                 
+8EE0:1A           1897           INC   A
+8EE1:C9 18        1898           CMP   #$18
+8EE3:90 E0   8EC5 1899           BCC   SET4A
+8EE5:A9 28        1900 SET4D     LDA   #40
+8EE7:8D D5 90     1901           STA   WNDWDTH
+8EEA:4C F8 86     1902 SETDONE   JMP   VTAB
+8EED:A0 00        1903 HELP      LDY   #0            F(?) LIST LAST 16 PC
+8EEF:B9 4C 01     1904 HLP2      LDA   PCBUF,Y       ADDRESSES EXECUTED
+8EF2:C8           1905           INY                  DURING TRACE.
+8EF3:BE 4C 01     1906           LDX   PCBUF,Y
+8EF6:C8           1907           INY
+8EF7:20 FE 80     1908           JSR   PRNTAX
+8EFA:CC DC 90     1909           CPY   PCPNT
+8EFD:D0 05   8F04 1910           BNE   HLP3
+8EFF:A9 BC        1911           LDA   #$BC
+8F01:20 F5 88     1912           JSR   COUT
+8F04:20 4C 88     1913 HLP3      JSR   CROUT
+8F07:C0 20        1914           CPY   #32
+8F09:90 E4   8EEF 1915           BCC   HLP2
+8F0B:60           1916           RTS
+8F0C:A2 00        1917 PRTITLE   LDX   #$00          F(V). PRINT TITLE 
+8F0E:BD 27 8F     1918 TITLLOC   LDA   TITLE,X
+8F11:F0 06   8F19 1919           BEQ   PRADDR        
+8F13:20 F5 88     1920           JSR   COUT
+8F16:E8           1921           INX
+8F17:80 F5   8F0E 1922           BRA   TITLLOC       
+8F19:AD BC 90     1923 PRADDR    LDA   STARTLOC+1    PRINT ORIGIN ADDRESS
+8F1C:20 E2 88     1924           JSR   PRBYTE
+8F1F:A9 00        1925           LDA   #0
+8F21:20 E2 88     1926           JSR   PRBYTE
+8F24:4C 4C 88     1927           JMP   CROUT
+ 
+8F27:             1929 *** PROGRAM DATA AREA ***
+ 
+8F27:8D           1931 TITLE     DFB   $8D
+8F28:C1 CE C1 CC  1932           ASC   "ANALYST      128XP"
+8F35:8D           1933           DFB   $8D           TITLE MARKS START OF PDA
+8F36:CF D2 C7 A0  1934           ASC   "ORG          = "
+8F3C:A4           1935 BANKORG   ASC   "$"
+8F3D:00           1936           DFB   $00           
+8F3E:1C 8A        1937 MNEML     DFB   28,138
+8F40:1C 23 5D 8B  1938           DFB   28,35,93,139,27,161,157,138
+8F48:1D 23 9D 8B  1939           DFB   29,35,157,139,29,161,28,41
+8F50:19 AE 69 A8  1940           DFB   25,174,105,168,25,35,36,83
+8F58:1B 23 24 53  1941           DFB   27,35,36,83,25,161,173,26
+8F60:A5 5B A5 AC  1942           DFB   165,91,165,172,139,138,174,174
+8F68:A8 AD 29 8A  1943           DFB   168,173,41,138,124,139,21,156
+8F70:6D 9C A5 69  1944           DFB   109,156,165,105,41,83,132,19
+8F78:34 11 A5 69  1945           DFB   52,17,165,105,35,160
+8F7E:D8 62        1946 MNEMR     DFB   216,98
+8F80:5A 48 26 62  1947           DFB   90,72,38,98,148,136,84,68
+8F88:C8 54 68 44  1948           DFB   200,84,104,68,232,148,196,180
+8F90:08 84 74 B4  1949           DFB   8,132,116,180,40,110,116,244
+8F98:CC 4A 72 F2  1950           DFB   204,74,114,242,164,138,6,170
+8FA0:76 A2 74 C6  1951           DFB   118,162,116,198,116,116,68,104
+8FA8:B2 32 B2 72  1952           DFB   178,50,178,114,34,114,26,26
+8FB0:26 26 72 72  1953           DFB   38,38,114,114,136,200,196,202
+8FB8:26 48 44 44  1954           DFB   38,72,68,68,162,200
+8FBE:AC A9 AC A3  1955 CHAR1     DFB   172,169,172,163,168,164
+8FC4:D9 00 D8 A4  1956 CHAR2     DFB   217,0,216,164,164,0
+8FCA:C3 DA C9 C4  1957 CHAR3     ASC   "CZIDB-VN"    
+8FD2:C1 D8 D9     1958 RTBL      ASC   "AXY"         
+8FD5:00 21 81 82  1959 FMT2      DFB   0,33,129,130,90,73,89,77
+8FDD:91 92 86 4A  1960           DFB   145,146,134,74,133,157
+8FE3:F0 22 00 33  1961 FMT1      DFB   240,34,0,51,93,130,0,147
+8FEB:F3 22 00 33  1962           DFB   243,34,0,51,93,136,0,153
+8FF3:F0 2F 00 33  1963           DFB   240,47,0,51,93,143,0,159
+8FFB:F0 22 00 3B  1964           DFB   240,34,0,59,93,136,0,148
+9003:FD 22 00 33  1965           DFB   253,34,0,51,93,200,0,147
+900B:11 22 00 33  1966           DFB   17,34,0,51,93,200,0,169
+9013:F1 22 00 33  1967           DFB   241,34,0,51,93,143,0,159
+901B:F1 22 00 33  1968           DFB   241,34,0,51,93,143,0,159
+9023:26 31 87 9A  1969           DFB   38,49,135,154
+9027:12 32 52 72  1970 OPC65C    DFB   18,50,82,114
+902B:92 B2 D2 F2  1971           DFB   146,178,210,242,58,26,137,28
+9033:14 7A 5A 9C  1972           DFB   20,122,90,156,100,158,116,124
+903B:3C 34        1973           DFB   60,52
+903D:4C A4 AC B4  1974           DFB   76,164,172,180,188,196,204,228
+9045:EC           1975           DFB   236
+9046:11 31 51 71  1976 REPL65C   DFB   17,49,81,113,145,177
+904C:D1 F1 C2 E2  1977           DFB   209,241,194,226,52,164,172,196
+9054:E4 5C 5C 5C  1978           DFB   228,92,92,92,92,124,60,52
+905C:7C A0 A0 A0  1979           DFB   124,160,160,160,160,192,192
+9063:E0 E0        1980           DFB   224,224
+9065:C6 98 F9 B1  1981 CHRTBL    DFB   198,152,249,177,241,3  
+906B:EC A6 A4 06  1982           DFB   236,166,164,6,149,5
+9071:00 93 02 A7  1983           DFB   0,147,2,167,153
+9076:9B 9A EF E9  1984           DFB   155,154,239,233,1,191
+907C:A8 ED 9E EB  1985           DFB   168,237,158,235,197
+9081:25 89        1986 SUBTBL    DW    BL1-1         F(CR) MUST BE 1ST IN TBL
+9083:EC 8E        1987           DW    HELP-1        F(?) LIST PC'S TRACED
+9085:4E 8E        1988           DW    SETVID-1      F(@) SWITCH 40/80 COL
+9087:BC 90        1989           DW    AUXV-1        F(CTRL-X) MOVE TO AUX
+9089:12 8E        1990           DW    AUXRW-1       F(X) MAIN/AUX $200-BFFF
+908B:3E 8B        1991           DW    EXECJSR-1     F(J) EXECUTE JSR  
+908D:28 81        1992           DW    STEP-1        F(S) STEP 
+908F:49 89        1993           DW    SETMODE-1     F(-) 16 BIT SUBTRACTION 
+9091:49 89        1994           DW    SETMODE-1     F(+) 16 BIT ADDITION 
+9093:65 89        1995           DW    MOVE-1        F(M) MOVE 
+9095:57 89        1996           DW    LT-1          F(<) COPY A2 TO A4 & A5 
+9097:7B 89        1997           DW    LIST-1        F(L) LIST DISASSEMBLY
+9099:DA 89        1998           DW    GO-1          F(G) GO 
+909B:49 89        1999           DW    SETMODE-1     F(:) STORE 
+909D:60 85        2000           DW    SETREG-1      F(I) SET INTERNAL PC/REG
+909F:49 89        2001           DW    SETMODE-1     F(.) XAM 
+90A1:2A 89        2002           DW    BLANK-1       F( ) HANDLE SPACES 
+90A3:65 88        2003           DW    ASC-1         F(") DUMP IN ASCII 
+90A5:B5 8C        2004           DW    MINI-1        F(!) MINI-ASSEMBLER 
+90A7:0B 8F        2005           DW    PRTITLE-1     F(V) PRINT TITLE
+90A9:B3 89        2006           DW    SETPRNT-1     F(P) TO PRINTER
+90AB:47 85        2007           DW    LOAD-1        F(H) LOAD FOR HSF
+90AD:CA 8B        2008           DW    FIND-1        F(CTRL-F) HEX SEQ. FIND
+90AF:FA 8D        2009           DW    SETDOS-1      F(/) SET DOS CALL JSR #.
+90B1:86 82        2010           DW    TRACE-1       F(T) TRACE
+90B3:08 86        2011           DW    BINARY-1      F(%) VALUE IN BINARY
+90B5:64 8D        2012           DW    RELOC-1       F(R) RELOCATOR
+90B7:E0 86        2013           DW    HOME-1        F(CTRL-L) CLEAR SCREEN
+90B9:36 86        2014 OUTVECT   DW    VIDOUT
+90BB:00 80        2015 STARTLOC  DW    START
+ 
+90BD:             2017 * DYNAMIC PROGRAM AREA *
+ 
+90BD:4C 00 92     2019 AUXV      JMP   AUXLOAD       F(CTRL-X) ONE TIME VECTOR
+90C0:        0001 2020 CSWL      DS    1             ADDR. OF OUTPUT ROUTINE 
+90C1:        0001 2021 CSWH      DS    1
+90C2:        0001 2022 TFLG      DS    1             <>0 = CANCEL COUT FOR TRC 
+90C3:        0001 2023 JFLG      DS    1             SET TO ALLOW F(J) 
+90C4:00 BF        2024 DOSCALL   DW    MLI           ROUTINE TO JSR IMMED.
+90C6:        0001 2025 ERRFLG    DS    1             SET FOR BAD OPCODE 
+90C7:        0002 2026 PCREG     DS    2,0
+90C9:00           2027 ACC       DFB   0             DON'T CHANGE ORDER 
+90CA:00           2028 XREG      DFB   0             OF ACC TO SPNT
+90CB:00           2029 YREG      DFB   0
+90CC:00           2030 STATUS    DFB   0
+90CD:FF           2031 SPNT      DFB   $FF
+90CE:FF           2032 SREF      DFB   $FF           STACK REF SET BY TXS OPC
+90CF:        0001 2033 LMNEM     DS    1
+90D0:        0001 2034 RMNEM     DS    1
+90D1:        0001 2035 LENGTH    DS    1
+90D2:        0001 2036 FORMAT    DS    1
+90D3:        0001 2037 MODE      DS    1
+90D4:        0001 2038 FLG8      DS    1             FF = 80 COL, 0 = 40 COL
+90D5:        0001 2039 WNDWDTH   DS    1
+90D6:        0001 2040 PROMPT    DS    1
+90D7:        0001 2041 CH        DS    1
+90D8:00           2042 CV        DFB   0
+90D9:        0001 2043 DSPTOP    DS    1             TOP OF DISPLAY FOR STEP
+90DA:        0001 2044 YSAV      DS    1
+90DB:        0001 2045 YSAV1     DS    1
+90DC:00           2046 PCPNT     DFB   0             INDEX TO PCBUF
+90DD:        0002 2047 BRKADDR   DS    2,255         BREAK FOR STEP,TRACE,LIST
+90DF:        0001 2048 TEMP1     DS    1             FOR INSTDSP AND STEP.
+90E0:        0001 2049 TEMP2     DS    1             FOR STEP.
+90E1:        0001 2050 TEMP3     DS    1             FOR STEP.
+90E2:        0001 2051 PCFLG     DS    1             PRNTPC ON/OFF FOR TRACE
+90E3:        0001 2052 COUNTER   DS    1             FOR TRACE
+90E4:        0011 2053 ZBUF      DS    $100-PCL      PAGE ZERO STORAGE BUFFER
+90F5:        00F5 2054 PAGEFIL   EQU   >*
+90F5:        000A 2055           DS    $FF-PAGEFIL
+90FF:00           2056 ROMFLG    DFB   0             1 = TRACE JSR ROM $D000-FFFF
+9100:        0100 2057 STACK     DS    $100,0        MUST BE ON PAGE BOUNDARY
+9200:A9 00        2058 AUXLOAD   LDA   #>START       F(CTRL-X) MOVE ANALYST
+9202:85 3C        2059           STA   MA1           TO AUX. THIS CODE NOT
+9204:85 42        2060           STA   MA4           RELOCATEABLE.
+9206:A9 80        2061           LDA   #<START
+9208:85 3D        2062           STA   MA1+1
+920A:85 43        2063           STA   MA4+1
+920C:A9 00        2064           LDA   #>AUXLOAD
+920E:85 3E        2065           STA   MA2
+9210:A9 92        2066           LDA   #<AUXLOAD
+9212:85 3F        2067           STA   MA2+1
+9214:A9 03        2068           LDA   #$03
+9216:8D 22 85     2069           STA   INITBL+43
+9219:A9 05        2070           LDA   #$05
+921B:8D 25 85     2071           STA   INITBL+46
+921E:20 6B 8A     2072           JSR   INITXQTS
+9221:A9 60        2073           LDA   #$60
+9223:8D BD 90     2074           STA   AUXV
+9226:A9 D8        2075           LDA   #$D8          'X'
+9228:8D 3C 8F     2076           STA   BANKORG
+922B:38           2077           SEC
+922C:20 11 C3     2078           JSR   AUXMOVE
+922F:A2 05        2079           LDX   #5
+9231:BD 40 92     2080 AUXLD2    LDA   INITBL4,X
+9234:9D 3A 01     2081           STA   XQT,X
+9237:CA           2082           DEX
+9238:10 F7   9231 2083           BPL   AUXLD2
+923A:9C 00 80     2084           STZ   START         DESTROY OLD ANALYST ID
+923D:4C 3A 01     2085           JMP   XQT
+9240:20 2C 01     2086 INITBL4   JSR   XQTS+36
+9243:4C B7 8A     2087           JMP   TXTMON
+
+   F5 A1H              F4 A1L            89A6 A1PC           89A9 A1PCLP        
+ 89A4 A1PCX          8CD4 A1TOPC           F7 A2H              F6 A2L           
+   F9 A3H              F8 A3L            855C A3SET            FB A4H           
+   FA A4L              FD A5H              FC A5L            84B6 ACCLOC        
+ 90C9 ACC            88CE ADD            8845 ADDINP         849C APCODE        
+ 8866 ASC            8E20 AUX2MAIN       9231 AUXLD2         9200 AUXLOAD       
+ C311 AUXMOVE        8E13 AUXRW          90BD AUXV           8669 BACKSPC       
+ 8F3C BANKORG          FF BAS2H            FE BAS2L            F2 BASH          
+   F1 BASL           8822 BCKSPC         8627 BELL2          8625 BELL          
+ 8609 BINARY         861B BIT1           8926 BL1            892B BLANK         
+ 8935 BLNK2          8612 BNDSP          82DF BRANCH         90DD BRKADDR       
+ 870D BSCLC2         883F CAPTST         8E4C CHK80          90D7 CH            
+ 8FBE CHAR1          8FC4 CHAR2          8FCA CHAR3          8D5C CHARIN        
+ 8C18 CHGTMP         8DE5 CHKLO          8E3F CHKVID         8ADD CHRSRCH       
+ 9065 CHRTBL         8751 CLEARDSP       874A CLEOL4A        8742 CLEOL4        
+ 872D CLEOL8A        8735 CLEOL8B        873E CLEOL8C        8719 CLEOLZ        
+ C00C CLR80VID       8753 CLRDSP1        875A CLRDSP2        8760 CLRDSP3       
+ 876C CLRDSP4        8716 CLREOL         86E9 CLS1           8C23 CMPNUM        
+ 90E3 COUNTER        8918 COUT2          8922 COUT4          88F5 COUT          
+ 891B COUT3          8862 COUTGO         8633 COUTZ          868A CR            
+ 884C CROUT          90C1 CSWH           90C0 CSWL           87BB CTLCRTS       
+ 87B9 CTLC           8680 CTRLCHAR       879D CTRLC          90D8 CV            
+ 887A DATAOUT        8AF6 DIG            8D59 DISAS          8C3E DONE          
+ 90C4 DOSCALL        8E36 DPROMPT        90D9 DSPTOP         8C79 DSS           
+ 890C ENDHOOK        8D64 ENDMINI        8E33 EPROMPT        8CA6 ERRAT         
+ 8032 ERR            90C6 ERRFLG         8B44 ERRJ           8CA9 ERROR         
+ 8B3F EXECJSR        8BCB FIND           90D4 FLG8           8FE3 FMT1          
+ 8FD5 FMT2           90D2 FORMAT         877A FWAIT          8BE3 FXEND         
+ 805D GETFMT2        8045 GETFMT         8817 GETLNZ         8B14 GETNUM        
+ 89E6 GOBREAK        8B47 GOJSR          89DB GO             8B5C GOPC          
+ 8EED HELP           C055 HISCR          8EEF HLP2           8F04 HLP3          
+ 86E1 HOME           E000 IDROM          8021 IEVEN          016C IN            
+ 8BE8 INCBAS         81BA INDY           C001 INHPAGE2       8A23 INITBL3       
+ 9240 INITBL4        84F7 INITBL         8B99 INITBL2        8A6D INITXQ2       
+ 8A6B INITXQTS       8003 INSDS1         8013 INSDS2         8010 INSDST        
+ 807E INSTDSP        90C3 JFLG           8BAB JRTS           8BC1 JRTS2         
+ 8BCA JRTS3          8BC4 JRTSX          C010 KBDSTRB        C000 KBD           
+ 87DC KEY2           87E8 KEY3           87EA KEY4           87A9 KYWAIT        
+ 87B7 KYWT2          8443 LEN0           90D1 LENGTH         8982 LIST2         
+ 897C LIST           89A3 LISTRTS        90CF LMNEM          89F0 LOADRT        
+ 8548 LOAD           C054 LOWSCR         895A LT2            8958 LT            
+   3C MA1              3E MA2              42 MA4            C002 MAINRD        
+ C004 MAINWR           37 MCSWH            36 MCSWL          8CCF MINI2         
+ 8CB6 MINI           BF00 MLI            8F3E MNEML          8F7E MNEMR         
+ 807A MNNDX3         8068 MNNDX          806F MNNDX1         8073 MNNDX2        
+ 886C MOD8CHK        90D3 MODE           8AC0 MONZ           8966 MOVE          
+ 8B87 MOVPARM        8B90 MVPRM1         8DEE NABS           841B NBRA          
+ 82DA NBRNCH         8DF8 NEWGO          82EF NEWPC          8614 NEXTBIT       
+?8AEC NEXTITM        880D NOTCR1         87FC NOTCR          8833 NOTDEL        
+ 8C9B NXOPC          878E NXTA1          8788 NXTA4          8B04 NXTBAS        
+ 8AFC NXTBIT         8B0F NXTBS2         8826 NXTCHAR        8B1A NXTCHR        
+ 8AD5 NXTITM         82F4 NXTPC          83D3 ODDNEW         9027 OPC65C        
+ 848B OPCX           8946 OUTEQ          FE95 OUTPORT        8850 OUTSP         
+ 90B9 OUTVECT          F5 PAGEFIL        C061 PB0            C062 PB1           
+ 8123 PCADJ2         811D PCADJA         8112 PCADJAP        811A PCADJL        
+ 810F PCADJLP        810E PCADJ          014C PCBUF          8C5A PCERR         
+ 90E2 PCFLG            F0 PCH            82EC PCINC            EF PCL           
+ 90DC PCPNT          90C7 PCREG          0125 PEEK           845A PHCHECK
+ 8213 PNTINC         8C5F POKE           8C5C POKEAT         8865 PRA1RTS       
+ 8854 PRA1           8F19 PRADDR         80CA PRADR1         80CE PRADR2        
+ 80E1 PRADR3         80E5 PRADR4         80EB PRADR5         88D8 PRANS         
+ 88AB PRASC          8105 PRBLNK3        8107 PRBLNK         88E2 PRBYTE        
+ 859E PRFLG          88ED PRHEXZ         80AC PRMN1          80B0 PRMN2         
+ 80FE PRNTAX         808A PRNTBL         8082 PRNTOP         81E4 PRNTPC        
+ 85EC PRNTSTK        80FD PRNTYX         90D6 PROMPT         8F0C PRTITLE       
+ 885B PRYX2          84B1 PULLAP         84DB PULL           84AB PUSH          
+ C01F RD80VID        8D2D RDADDR2        8D33 RDADDR3        8D4A RDADDR4       
+ 8D1F RDADDR         C016 RDAUXZP        8CFE RDFMT          8D1D RDFMT2        
+ 8D1E RDFMT3         87BC RDKEY          8CE0 RDMNEM2        8CEE RDMNEM3       
+ 8CDC RDMNEM         C018 RDPAGE2        C01C RDSCR          8583 RDSP1         
+ C01A RDTEXT         8A7A REENTER        8578 REGDSP         8C4D RELADJ        
+ 8C57 RELADJ2        8C41 RELADR         8D65 RELOC          8D9A RELOC2        
+ 8DC7 RELOC3         9046 REPL65C        8A9D RESET          8A26 RESTORE       
+ 8581 RGDSP1         90D0 RMNEM          90FF ROMFLG         8AAE RST2          
+ 8FD2 RTBL           8A77 RTENTRY        802C RTMSKZ         8A91 RTREST        
+ 8044 RTS1           8128 RTS2           8779 RTS4A          879C RTS4B         
+ 8945 RTS5           89B3 RTS6           8E4E RTS7           8E24 RWSET         
+ 85FE SAVEPC         8A38 SAVE           86A4 SCRL1          86B6 SCRL2         
+ 86C8 SCRL3          86D0 SCRL4          86D4 SCRL5          8EB8 SET40         
+ 8EC5 SET4A          8ECB SET4B          8ED4 SET4C          8EE5 SET4D         
+ 8E7A SET80          C00D SET80VID       8E8E SET8A          8E94 SET8B         
+ 8EA0 SET8C          8EB6 SET8D          852F SETBREAK       8538 SETBRK1       
+ 853F SETBRK2        8EEA SETDONE        8DFB SETDOS         8E0A SETDS2        
+ 8954 SETMDZ         894A SETMODE        89B4 SETPRNT        8561 SETREG        
+ 8550 SETRG1         8556 SETRG2         8C04 SETTMP         8E4F SETVID        
+ 8C14 SETX           C030 SPKR           90CD SPNT           8E39 SPROMPT       
+ 90CE SREF           8199 SSTEPT         8193 SSTEPW         81E1 SSTEPZ        
+ 8196 SSTEP          84C7 STACKLOC       9100 STACK          90BB STARTLOC      
+ 8000 START          90CC STATUS         814D STEP2          815D STEP2A        
+ 8129 STEP           8141 STEP1          8166 STEP3          817C STEP4         
+ 818C STEP5          812C STEPL          8173 STEPT          8136 STEPZ         
+ 83DA STKLOOP        846D STKOPC         8400 STKOUT         8403 STOUT2        
+ 8E2A STPRMPT        8293 STRACE         9081 SUBTBL         C082 SWITCH2       
+ 8AF1 SYNERR         90DF TEMP1          90E0 TEMP2          90E1 TEMP3         
+ 8BF6 TESTEND        8E63 TEXT           90C2 TFLG           8F27 TITLE         
+ 8F0E TITLLOC        8B2B TOSUB          8287 TRACE          829F TRACE5        
+ 82A1 TRACE6         82B0 TRACE7         833B TRACE8         82FA TRACEBY       
+ 81FE TRACEPC        82C9 TRACES2        82B8 TRACES         8226 TRCPC1        
+ 823B TRCPC2         8256 TRCPCD         8282 TRCPCG         8262 TRCPCI        
+ 8275 TRCPCS         83A0 TSTEP3X        8467 TSTEP6         833E TSTEP         
+ 8353 TSTEP3         8407 TSTEP4         840C TSTEP5         83F6 TSTEPRD       
+ 83FB TSTEPWR        8AB7 TXTMON         C051 TXTSET         8404 UPDPCGO       
+ 82EB UPDPC          8489 UPDSTACK       8675 UP             843E UPDSPNT       
+ 8645 VID1           8655 VID2           8657 VID3           8636 VIDOUT        
+ 8668 VIDRTS         86F8 VTAB           86FB VTABV          867D VTABVGO       
+ 86FE VTABZ          877D WAIT2          877E WAIT3          877C WAIT          
+ 0102 WARMV          90D5 WNDWDTH        8872 XAM1           8899 XAM2          
+ 889F XAM3           88B0 XAM4           88B3 XAM5           88B9 XAMPM         
+ 888C XAMZ           8867 XAM            8388 XBRK           8457 XBRKGO        
+ 82FD XJMPATX        831E XJMPAT         831D XJMP           8300 XJSR          
+ 84A8 XPHP           84BB XPLP           8494 XPLX           8483 XPLY          
+ 8423 XQ1            8426 XQ2            8B5E XQINIT2        8A12 XQJ           
+ 8A14 XQJ2           8B69 XQLOC1         8379 XQST1          837C XQSTK         
+ 0108 XQTS           013A XQT            90CA XREG           84C3 XRTS          
+ 8432 XTSX           8438 XTXS           0127 YPEEK          84EA YPOKEPC       
+ 011D YPOKE          90CB YREG           90DA YSAV           90DB YSAV1
+ 90E4 ZBUF             F3 ZFLG           8B39 ZMODE          8A4D ZSWAP         
+ 8A60 ZSWAPE         8A5F ZSWAPRTS       8A50 ZSWAPS         8A47 ZSWAPT        
+ 8A52 ZSWP1         
