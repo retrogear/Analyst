@@ -1,1 +1,2 @@
 Version XE added f(&) to exit to DOS and removed f(+) f(-) and f(%)
+Version XE build 1001 moved WARMV from $102 to $132 and added test for 65c02. Added build # to title screen.
