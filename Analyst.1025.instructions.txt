@@ -1,0 +1,95 @@
+
+		*** Analyst Debugger Version 128XE ***
+
+			01/10/21 Build 1025
+			last edit: 1/7/24
+
+This debugger version requires an enhanced 128k Apple //e with a 65c02 processor. The memory footprint is about $1200 so about 4.6k. The best place to run it seems to be $8000-9200 but occasionally $6000-7200. $6000 stays above the graphics pages and $8000 hides below the $9600 buffers. The reason it works so well is that it is totally independent of the ROM's. All subroutines are internal and even it's use of the stack and zero page are almost totally virtual. This debugger traces code as an emulator. This trace code is heavily expanded from Woz's original concept of how to do step and trace from a pseudo (INITBL) region. (look up XQ1 and INITBL in the original Apple II monitor F8 rom) . My code that is hidden in the stack is a larger INITBL. Most virtual execution of opcodes is done in the middle of the stack at $132-169 and when the alt zero page is needed, it mirrors a copy to that same space in the altzp. All memory softswitches are executed from the main zp except the altzp ones. By maintaining a mirror copy of $132-169 in altzp, when the altzp switch is executed, it is immediately in the same spot in the alternate zp/stack.
+
+			** Command Summary **
+
+ctrl-F	Find hex sequence defined by f(H). (see Details below)
+     G	Go execute in immediate mode
+     H	load Hex bytes to find with ctrl-F (see Details below)
+     I	show or set pc and Internal A,X,Y,P,S registers (see Details below)
+     J	execute JSR subroutine in immediate mode during step (see Details below)
+ctrl-L	clear present screen and home cursor
+     L	list 65c02 disassembly or Loop in trace mode (see Details for List and Loop below)
+     M	Move block of memory
+     R	Relocate debugger to new address page (see Details below)
+     S	enter Step mode or Step an instruction (see Details below)
+     T	Trace program (see Details below)
+     V	display debugger Version and origin address ($nnnn is in main memory, Xnnnn is in aux memory)
+ctrl-X	move debugger to aux bank (disabled after use - see Details below)
+     X	toggle main/auX ram banks (see Details below) or skip neXt instruction during step
+     "	dump memory in ascii (see Details below)
+     /	set/display subroutine to jsr in immediate mode (see Details below)
+     &	exit to or from DOS / ProDOS (see Details below)
+     ?	display last 16 pc's executed during trace
+     @	set output to 40/80 columns or text mode from graphics (see Details below)
+     <	range delimiter
+     .	range delimiter
+     :	store value in memory
+
+			** Command Details **
+
+To find a sequence of hex bytes in an address range, type H:n1 n2 n3... <cr> then xxxx<yyyy ctrl-F <cr>.
+
+To display the Program Counter (PC) and internal registers, type I<cr>. To change the PC (nnnn) and registers, type nnnnI:AA XX YY PP SS RR <cr>. PC entry before I is optional. RR = stack top reference set by a TXS instruction.
+ 
+For Listing a disassembly, the output is continuous, use ctrl-s to pause, ctrl-c to stop.
+To list only a range, yyyy<xxxxL lists xxxx to yyyy.
+
+For step, type nnnnS <CR> then S, Open-Apple, space, or J to step each
+instruction. S or Open-Apple to step into JSR, J to execute subroutine,
+X to skip instruction, T to enter trace, @ for text mode, L for loop, ctrl-c
+to exit. Loop command sets breakpoint after instruction to be executed next
+and enters trace. This can be used on a branch instruction which loops
+back to trace until loop is done. @ will execute next instruction.
+
+For trace, type nnnnT or T <cr>. Breakpoint is optional and 
+designated by bbbb<nnnnT. Same for step mode. During trace, program
+counter is displayed at the top of the screen every 256 lines. Open Apple
+switches mode to slow trace with pc updated each line. Closed Apple exits to step mode. Step will execute subroutine specified by nnnn/ in immediate mode to enable tracing across dos calls. Use FFFF/ to trace all addresses. '/' alone
+displays value. ROM $C000-FFFF will jsr immediate mode unless the address
+origin+$11FF is <> 0 which will enable tracing thru JSR ROM subroutines
+because certain ROM routines which involve setting i/o and dos hooks
+do not RTS to Analyst. For example, if Analyst ORG = $8000 then 91FF:01 will trace ROM. JSR $C3nn will always JSR immediate mode if Analyst is
+running 80 columns because it uses the same subroutines. Trace activity is
+denoted by a flashing $ (or # for JSR immediate mode). Breakpoint enters
+step mode and does execute the breakpoint instruction. Step and Trace
+break for illegal opcodes and display 'ERR'.   
+
+For jump, type 'Jn' where n represents the # of parameter bytes
+following the JSR instruction. J<cr> defaults to 0. Jumps during step and
+trace immediate handle JSR $BF00 as J3 for ProDOS MLI with 3 parameter bytes
+following. If subroutine being jumped contains a TXS instruction, Analyst
+may lose control !!! Also, trace immediate will not handle a subroutine
+other than $BF00 with parameter bytes following !!! f(J) uses stack in Analyst
+local memory. To execute Jn, a breakpoint could be set after n parameter bytes by the command: xxxx+3+n<xxxxG which would use spnt. xxxx+3+n area would have to
+be r/w enabled before and after call !!!
+
+Typing X <cr> switches between main and aux $200-BFFF r/w.
+'}' brace prompt denotes aux read mode only. To insure aux or main is both
+read and write enabled, use 'X' to reset r/w together.
+
+Typing ctrl-X <cr> moves a copy of Analyst to aux memory. This is a one-time function which disables itself after use. Also disabled if f(R) relocate is done.
+
+To dump memory in ascii, type xxxx.yyyy" or xxxx".
+
+To switch text screens, type @8 for 80 col, @4 for 40 col or @ for text mode from graphics.
+
+To relocate, type nn00R <cr>. It will round off to nearest page boundary.
+Do not set < $800 !!! Do not move less than +- $1400 from old origin !!!
+If moved to ram card, do not change card r/w state !!! After this function is used, f(ctrl-X) aux move is disabled.
+
+To use DOS / ProDOS, type & then use & to re-enter. & will re-enter Analyst
+even after a ctrl-reset. & is the same as executing 3F5<3D0G in Analyst
+
+			** Misc Operating Notes **
+
+Keyboard input buffer is limited to 38 characters.
+
+
+
+
